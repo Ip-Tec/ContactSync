@@ -40,43 +40,40 @@ This project contains two main applications: a web application built with React 
 #### Web App Folder Structure
 
 ContactSync/
-├── web-app/
-│
-├── public/                     # Static assets
-│   ├── images/
-│   ├── favicon.ico
-│   └── index.html
-│
-├── src/                        # Main source code
-│   ├── assets/                 # Static files (images, fonts, etc.)
-│   ├── components/             # Reusable UI components
-│   │   ├── Navbar.jsx
-│   │   ├── Footer.jsx
-│   │   ├── Button.jsx
-│   │   ├── Card.jsx
-│   │   └── ...
-│   ├── pages/                  # Page components (routes)
-│   │   ├── Home.jsx
-│   │   ├── About.jsx
-│   │   ├── Profile.jsx
-│   │   ├── Settings.jsx
-│   │   └── ...
-│   ├── context/                 # Context API for global state
-│   ├── hooks/                   # Custom hooks
-│   ├── services/                # API calls (e.g., Axios)
-│   ├── styles/                  # CSS or Tailwind
-│   │   ├── global.css
-│   │   ├── theme.js
-│   │   └── ...
-│   ├── App.jsx                   # Main component
-│   ├── main.jsx                   # Entry point
-│   └── router.jsx                 # React Router configuration
-│
-├── .env                          # Environment variables
-├── .gitignore
-├── package.json
-├── vite.config.js
-└── README.md
+└── web-app/
+    ├── public/                     # Static assets
+    │   ├── images/
+    │   ├── favicon.ico
+    │   └── index.html
+    ├── src/                        # Main source code
+    │   ├── assets/                 # Static files (images, fonts, etc.)
+    │   ├── components/             # Reusable UI components
+    │   │   ├── Navbar.jsx
+    │   │   ├── Footer.jsx
+    │   │   ├── Button.jsx
+    │   │   ├── Card.jsx
+    │   │   └── ...
+    │   ├── pages/                  # Page components (routes)
+    │   │   ├── Home.jsx
+    │   │   ├── About.jsx
+    │   │   ├── Profile.jsx
+    │   │   ├── Settings.jsx
+    │   │   └── ...
+    │   ├── context/                # Context API for global state
+    │   ├── hooks/                  # Custom hooks
+    │   ├── services/               # API calls (e.g., Axios)
+    │   ├── styles/                 # CSS or Tailwind
+    │   │   ├── global.css
+    │   │   ├── theme.js
+    │   │   └── ...
+    │   ├── App.jsx                 # Main component
+    │   ├── main.jsx                # Entry point
+    │   └── router.jsx              # React Router configuration
+    ├── .env                        # Environment variables
+    ├── .gitignore
+    ├── package.json
+    ├── vite.config.js
+    └── README.md
 
 ### Mobile App (React Native + Expo)
 
