@@ -39,7 +39,7 @@ This project contains two main applications: a web application built with React 
 
 #### Web App Folder Structure
 
-```
+``` text
 ContactSync/
 └── web-app/
     ├── public/                     # Static assets
@@ -81,44 +81,42 @@ ContactSync/
 
 #### Mobile App Folder Structure
 
-```
+``` text
 ContactSync/
-├── mobile-app/
-│
-├── assets/                   # Images, fonts, etc.
-│
-├── src/                      # Main source
-│   ├── components/           # Reusable UI components
-│   │   ├── Button.js
-│   │   ├── Card.js
-│   │   ├── Header.js
-│   │   ├── Footer.js
-│   │   └── ...
-│   ├── screens/              # Pages (screens)
-│   │   ├── HomeScreen.js
-│   │   ├── ProfileScreen.js
-│   │   ├── SettingsScreen.js
-│   │   └── ...
-│   ├── navigation/           # React Navigation config
-│   │   ├── StackNavigator.js
-│   │   ├── TabNavigator.js
-│   │   └── ...
-│   ├── context/              # Context API for global state
-│   ├── hooks/                # Custom hooks
-│   ├── services/             # API calls
-│   ├── styles/               # Global styles
-│   │   ├── theme.js
-│   │   ├── colors.js
-│   │   └── ...
-│   ├── App.js                 # Main App entry
-│   └── index.js                # Entry point
-│
-├── .env                       # Environment variables
-├── .gitignore
-├── app.json                   # Expo config
-├── package.json
-└── README.md
+└── mobile-app/
+    ├── assets/                   # Images, fonts, etc.
+    ├── src/                      # Main source
+    │   ├── components/           # Reusable UI components
+    │   │   ├── Button.js
+    │   │   ├── Card.js
+    │   │   ├── Header.js
+    │   │   ├── Footer.js
+    │   │   └── ...
+    │   ├── screens/              # Pages (screens)
+    │   │   ├── HomeScreen.js
+    │   │   ├── ProfileScreen.js
+    │   │   ├── SettingsScreen.js
+    │   │   └── ...
+    │   ├── navigation/           # React Navigation config
+    │   │   ├── StackNavigator.js
+    │   │   ├── TabNavigator.js
+    │   │   └── ...
+    │   ├── context/              # Context API for global state
+    │   ├── hooks/                # Custom hooks
+    │   ├── services/             # API calls
+    │   ├── styles/               # Global styles
+    │   │   ├── theme.js
+    │   │   ├── colors.js
+    │   │   └── ...
+    │   ├── App.js                # Main App entry
+    │   └── index.js              # Entry point
+    ├── .env                      # Environment variables
+    ├── .gitignore
+    ├── app.json                  # Expo config
+    ├── package.json
+    └── README.md
 ```
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
