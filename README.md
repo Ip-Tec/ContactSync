@@ -14,12 +14,16 @@ ContactSync is a lightweight mobile and web application designed to help small b
 
 1. **Clone the repository.**
 2. **Install dependencies.**
-3. **Run the app on your desired platform.**
+3. **Set up your Supabase backend:**
+   - Create a project on [Supabase](https://supabase.com/).
+   - Configure your database and generate your API keys.
+   - Add the Supabase keys to your environment variables in the `.env` file.
+4. **Run the app on your desired platform.**
 
 ## Tech Stack
 
 - **Frontend:** React (Web), React Native (Expo) for Mobile
-- **Backend:** Node.js (optional)
+- **Backend:** [Supabase](https://supabase.com/) for database, authentication, and real-time data synchronization
 
 ## Contributing
 
@@ -33,8 +37,7 @@ This project contains two main applications: a web application built with React 
 
 ### React (Web) App
 
-#### Folder Structure
-
+#### Web App Folder Structure
 
 ContactSync/
 ├── web-app/
@@ -75,10 +78,9 @@ ContactSync/
 ├── vite.config.js
 └── README.md
 
-
 ### Mobile App (React Native + Expo)
 
-### Folder Structure
+#### Mobile App Folder Structure
 
 ContactSync/
 ├── mobile-app/
@@ -122,4 +124,3 @@ ContactSync/
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Contact
-
