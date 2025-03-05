@@ -39,6 +39,7 @@ This project contains two main applications: a web application built with React 
 
 #### Web App Folder Structure
 
+```
 ContactSync/
 └── web-app/
     ├── public/                     # Static assets
@@ -74,11 +75,13 @@ ContactSync/
     ├── package.json
     ├── vite.config.js
     └── README.md
+```
 
 ### Mobile App (React Native + Expo)
 
 #### Mobile App Folder Structure
 
+```
 ContactSync/
 ├── mobile-app/
 │
@@ -115,7 +118,7 @@ ContactSync/
 ├── app.json                   # Expo config
 ├── package.json
 └── README.md
-
+```
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
