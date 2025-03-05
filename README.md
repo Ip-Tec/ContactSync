@@ -70,10 +70,10 @@ ContactSync/
 │   └── router.jsx                 # React Router configuration
 │
 ├── .env                          # Environment variables
-├── .gitignore                    
-├── package.json                  
-├── vite.config.js                
-└── README.md                    
+├── .gitignore
+├── package.json
+├── vite.config.js
+└── README.md
 
 
 ### Mobile App (React Native + Expo)
@@ -112,8 +112,14 @@ ContactSync/
 │   └── index.js                # Entry point
 │
 ├── .env                       # Environment variables
-├── .gitignore                 
+├── .gitignore
 ├── app.json                   # Expo config
-├── package.json               
-└── README.md                  
+├── package.json
+└── README.md
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Contact
 
