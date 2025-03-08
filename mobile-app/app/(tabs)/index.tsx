@@ -1,31 +1,37 @@
-import { StyleSheet } from 'react-native';
+import { Image, StyleSheet, Platform } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+import { HelloWave } from '@/components/HelloWave';
+import ParallaxScrollView from '@/components/ParallaxScrollView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 
-export default function TabOneScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
-    </View>
+export default function HomeScreen() {
+  const { session } = useAuth();
+  
+  return session ? (
+    <Redirect href="/(tabs)" />
+  ) : (
+    <Redirect href="/auth/login" />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  titleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  stepContainer: {
+    gap: 8,
+    marginBottom: 8,
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+  reactLogo: {
+    height: 178,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
   },
 });
