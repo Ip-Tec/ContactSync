@@ -53,9 +53,10 @@ export default function RegisterScreen() {
   return (
     <ThemedView style={styles.container}>
       <Image 
-        source={require('@/assets/images/icon.png')} 
+        source={require('@/assets/images/logo.png')} 
         style={styles.logo} 
         resizeMode="contain"
+        className='w-full h-full rounded-full'
       />
       <ThemedText type="title" style={styles.title}>Create Account</ThemedText>
       
