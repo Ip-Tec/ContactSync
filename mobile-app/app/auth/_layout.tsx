@@ -8,7 +8,7 @@ export default function AuthLayout() {
   
   // Redirect to tabs if already logged in
   if (session) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href="/(screens)/PreHomeScreen" />;
   }
 
   return (

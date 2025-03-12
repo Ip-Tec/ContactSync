@@ -35,7 +35,7 @@ export default function LoginScreen() {
         setError(error.message);
         console.error("Login error:", error);
       } else {
-        router.replace('/(tabs)/home');
+        router.replace("/(screens)/PreHomeScreen");
       }
     } catch (e) {
       setError('An unexpected error occurred');

@@ -12,6 +12,7 @@ export function ThemedText({
   style,
   lightColor,
   darkColor,
+  className,
   type = 'default',
   ...rest
 }: ThemedTextProps) {
@@ -28,6 +29,7 @@ export function ThemedText({
         type === 'link' ? styles.link : undefined,
         style,
       ]}
+      className={className}
       {...rest}
     />
   );

@@ -1,210 +1,243 @@
-import React, { useEffect, useState, memo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
+  Animated,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
   View,
-  TextInput,
+  Linking,
   Text,
   Alert,
-  SectionList,
-  TouchableOpacity,
 } from "react-native";
-import * as Contacts from "expo-contacts";
-import { useRouter } from "expo-router";
-import SaveContactButton, { SaveLocation } from "@/components/SaveContactButton";
-import MergeContactsComponent, { Contact } from "@/components/MergeContactsComponent"; // adjust the import path as needed
+import { supabase } from "@/lib/supabase";
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import PaymentWebView from "@/components/payment/PaymentWebView"; // WebView modal for payment
+import ImportContactModal from "@/components/data/ImportContactModal"; // Import contact modal (wrapped in a BottomSheet)
 
-// Define props for ContactItem
-interface ContactItemProps {
-  contact: Contact;
-}
+const HEADER_MAX_HEIGHT = 220;
+const HEADER_MIN_HEIGHT = 70;
+const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
 
-const ContactItem = memo(({ contact }: ContactItemProps) => {
-  const router = useRouter();
+const ads = [
+  {
+    id: "1",
+    image: require("@/assets/images/logo.png"),
+    link: "https://www.example.com/ad1",
+  },
+  {
+    id: "2",
+    image: require("@/assets/images/explore.jpeg"),
+    link: "https://www.example.com/ad2",
+  },
+  {
+    id: "3",
+    image: require("@/assets/images/react-logo.png"),
+    link: "https://www.example.com/ad3",
+  },
+];
 
-  const handlePress = () => {
-    router.push({
-      pathname: "/(tabs)/ContactDetail",
-      params: { contact: JSON.stringify(contact) },
-    });
-  };
-
-  const initial = contact.name ? contact.name.charAt(0).toUpperCase() : "";
-
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      className="flex-row items-center p-3 border-b border-gray-200"
-    >
-      <View className="w-12 h-12 rounded-full bg-blue-500 items-center justify-center mr-4">
-        <Text className="text-white text-lg font-semibold">{initial}</Text>
-      </View>
-      <View className="flex-1">
-        <Text className="text-lg font-medium">{contact.name}</Text>
-        {contact.emails?.map((email) => (
-          <Text key={email.email} className="text-sm text-gray-600">
-            {email.email || "anonymous"}
-          </Text>
-        ))}
-        {contact.phoneNumbers?.map((phone) => (
-          <Text key={phone.number} className="text-sm text-gray-600">
-            {phone.number || "anonymous"}
-          </Text>
-        ))}
-      </View>
-    </TouchableOpacity>
-  );
-});
+const getIconForPackage = (name: string): string => {
+  const lower = name.toLowerCase();
+  if (lower.includes("diamond")) return "grade.star";
+  if (lower.includes("platinum")) return "stars.fill";
+  if (lower.includes("gold")) return "star.half";
+  if (lower.includes("silver")) return "star.border";
+  if (lower.includes("bronze")) return "whatshot.fill";
+  if (lower.includes("copper")) return "whatshot.fill";
+  if (lower.includes("starter")) return "flag.fill";
+  return "money-sign";
+};
 
 export default function HomeScreen() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
-  const [showMergeDuplicates, setShowMergeDuplicates] = useState(false);
+  const [priceData, setPriceData] = useState<
+    {
+      price: number;
+      number_of_contacts: number;
+      name: string;
+      payment_url: string;
+    }[]
+  >([]);
+  const [loadingPrice, setLoadingPrice] = useState(true);
+  const [selectedPackage, setSelectedPackage] = useState<{
+    price: number;
+    number_of_contacts: number;
+    name: string;
+    payment_url: string;
+  } | null>(null);
 
+  // State flags for modals/bottom sheets.
+  const [paymentWebViewVisible, setPaymentWebViewVisible] = useState(false);
+  const [importContactModalVisible, setImportContactModalVisible] =
+    useState(false);
+
+  // Fetch pricing data from Supabase.
   useEffect(() => {
-    const requestContactsPermission = async () => {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status === "granted") {
-        loadContacts();
+    async function fetchPriceData() {
+      setLoadingPrice(true);
+      const { data, error } = await supabase
+        .from("Price")
+        .select("price, number_of_contacts, name, payment_url");
+      if (error) {
+        console.error("Error fetching price data:", error.message);
+      } else if (data && data.length > 0) {
+        const sortedData = data.sort((a, b) => a.price - b.price);
+        setPriceData(sortedData);
       } else {
-        Alert.alert("Permission denied", "Unable to access contacts.");
+        console.error("No price data found.");
       }
-    };
-
-    requestContactsPermission();
+      setLoadingPrice(false);
+    }
+    fetchPriceData();
   }, []);
 
-  const loadContacts = async () => {
-    try {
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.Emails, Contacts.Fields.PhoneNumbers],
-      });
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [pulseAnim]);
 
-      // Format contacts and remove duplicate or null phone numbers/emails
-      const uniqueContacts = data.map((contact) => ({
-        ...contact,
-        emails: contact.emails
-          ? contact.emails
-              .filter((email) => email.email != null)
-              .map((email) => ({ email: email.email }))
-          : [],
-        phoneNumbers: contact.phoneNumbers
-          ? Array.from(
-              new Set(
-                contact.phoneNumbers
-                  .filter((phone) => phone.number != null)
-                  .map((phone) => phone.number)
-              )
-            ).map((number) => ({ number }))
-          : [],
-      }));
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
+    outputRange: [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT],
+    extrapolate: "clamp",
+  });
+  const headerTranslate = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
+    outputRange: [0, -HEADER_SCROLL_DISTANCE],
+    extrapolate: "clamp",
+  });
 
-      setContacts(uniqueContacts);
-      setFilteredContacts(uniqueContacts);
-    } catch (error) {
-      console.error("Failed to load contacts:", error);
-      Alert.alert("Error", "Failed to load contacts.");
+  const renderParallaxHeader = () => (
+    <Animated.View
+      className="bg-gray-300 overflow-hidden"
+      style={{
+        height: headerHeight,
+        transform: [{ translateY: headerTranslate }],
+      }}
+    >
+      <Image
+        source={require("@/assets/images/explore.jpeg")}
+        className="w-full h-full object-cover"
+      />
+    </Animated.View>
+  );
+
+  const renderAdItem = ({ item }: { item: (typeof ads)[0] }) => (
+    <TouchableOpacity onPress={() => Linking.openURL(item.link)}>
+      <Image source={item.image} className="w-48 h-30 rounded-xl mr-4" />
+    </TouchableOpacity>
+  );
+
+  const renderPriceCards = () => {
+    if (loadingPrice) {
+      return <ActivityIndicator size="large" color="#3b82f6" />;
     }
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    const filtered = contacts.filter((contact) =>
-      contact.name.toLowerCase().includes(query.toLowerCase())
+    if (!priceData || priceData.length === 0) {
+      return <Text className="text-red-500">Failed to load price data</Text>;
+    }
+    return (
+      <View className="flex-row flex-wrap justify-center">
+        {priceData.map((item, index) => {
+          const iconName = getIconForPackage(item.name);
+          return (
+            <TouchableOpacity
+              key={index.toString()}
+              className="bg-white rounded-2xl p-5 m-2 w-44 shadow"
+              onPress={() => {
+                setSelectedPackage(item);
+                setPaymentWebViewVisible(true);
+              }}
+            >
+              <View className="bg-blue-100 p-2 rounded-full">
+                <IconSymbol name={iconName as any} size={40} color="#3b82f6" />
+              </View>
+              <Text className="mt-2 text-2xl">₦{item.price}</Text>
+              <Text className="text-gray-600">{item.name}</Text>
+              <Text className="text-gray-600">
+                Get {item.number_of_contacts} contacts
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     );
-    setFilteredContacts(filtered);
   };
 
-  const handleSaveContact = (location: SaveLocation) => {
-    Alert.alert("Saving Contact", `Saving contact to ${location}`);
-  };
-
-  // A simple handler for merge results.
-  // Here you might update your contacts state by replacing the duplicate group with the merged contact.
-  const handleMerge = (mergedContact: Contact, mergedGroup: Contact[]) => {
-    Alert.alert("Merged", `Merged ${mergedGroup.length} contacts into ${mergedContact.name}.`);
-    // Example update: remove merged contacts and add the mergedContact
-    const mergedIds = new Set(mergedGroup.map((c) => c.id));
-    const updated = contacts.filter((c) => !mergedIds.has(c.id));
-    updated.push(mergedContact);
-    setContacts(updated);
-    setFilteredContacts(updated);
-  };
-
-  // Group contacts by the first letter of their names for display in the list
-  const validContacts = filteredContacts.filter((contact) => contact.name);
-  const groupedContacts = validContacts.reduce((acc, contact) => {
-    const firstLetter = contact.name ? contact.name[0].toUpperCase() : "#";
-    if (!acc[firstLetter]) {
-      acc[firstLetter] = [];
-    }
-    acc[firstLetter].push(contact);
-    return acc;
-  }, {} as Record<string, Contact[]>);
-
-  const sections = Object.keys(groupedContacts)
-    .sort()
-    .map((letter) => ({
-      title: letter,
-      data: groupedContacts[letter],
-    }));
+  const renderAds = () => (
+    <View className="mt-5">
+      <FlatList
+        data={ads}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item) => item.id}
+        renderItem={renderAdItem}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+      />
+    </View>
+  );
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Toggle Header: Switch between Contact List and Merge Duplicates */}
-      <View className="flex-row justify-around p-4 bg-gray-100">
-        <TouchableOpacity onPress={() => setShowMergeDuplicates(false)}>
-          <Text className={!showMergeDuplicates ? "text-blue-500 font-bold" : "text-gray-500"}>
-            Contacts
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setShowMergeDuplicates(true)}>
-          <Text className={showMergeDuplicates ? "text-blue-500 font-bold" : "text-gray-500"}>
-            Merge Duplicates
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View className="p-4 flex-1">
-        {showMergeDuplicates ? (
-          // Render the MergeContactsComponent with all loaded contacts
-          <MergeContactsComponent contacts={contacts} onMerge={handleMerge} />
-        ) : (
-          <>
-            {/* Search Bar */}
-            <TextInput
-              placeholder="Search Contacts"
-              value={searchQuery}
-              onChangeText={handleSearch}
-              className="bg-gray-100 rounded-full py-2 px-4 mb-4 border border-gray-300"
-            />
-
-            {/* SectionList for displaying contacts */}
-            <SectionList
-              sections={sections}
-              keyExtractor={(item, index) =>
-                item.id ? item.id : index.toString()
-              }
-              renderItem={({ item }) => <ContactItem contact={item} />}
-              renderSectionHeader={({ section: { title } }) => (
-                <Text className="bg-gray-200 text-gray-700 font-bold px-4 py-1">
-                  {title}
-                </Text>
-              )}
-              getItemLayout={(data, index) => ({
-                length: 72, // Approximate height including avatar and padding
-                offset: 72 * index,
-                index,
-              })}
-              initialNumToRender={30}
-              maxToRenderPerBatch={30}
-              windowSize={30}
-            />
-          </>
+    <View className="flex-1 bg-gray-100">
+      <Animated.ScrollView
+        contentContainerStyle={{ paddingBottom: 100 }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
         )}
-      </View>
-
-      {/* Floating Action Button for saving contact */}
-      <SaveContactButton onSave={handleSaveContact} />
+        scrollEventThrottle={16}
+      >
+        {renderParallaxHeader()}
+        <View className="mt-5 items-center">{renderPriceCards()}</View>
+        {renderAds()}
+      </Animated.ScrollView>
+      {selectedPackage && paymentWebViewVisible && (
+        <PaymentWebView
+          visible={paymentWebViewVisible}
+          url={selectedPackage.payment_url}
+          onPaymentSuccess={() => {
+            // When payment is successful, close the WebView and open the ImportContactModal.
+            setPaymentWebViewVisible(false);
+            setImportContactModalVisible(true);
+          }}
+          onClose={() => setPaymentWebViewVisible(false)}
+        />
+      )}
+      {selectedPackage && importContactModalVisible && (
+        <ImportContactModal
+          visible={importContactModalVisible}
+          onClose={() => setImportContactModalVisible(false)}
+          onSaved={() => {
+            setImportContactModalVisible(false);
+          }}
+        />
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  headerContainer: {
+    backgroundColor: "#D0D0D0",
+    overflow: "hidden",
+  },
+  headerImage: {
+    width: "100%",
+    height: HEADER_MAX_HEIGHT,
+    resizeMode: "cover",
+  },
+});

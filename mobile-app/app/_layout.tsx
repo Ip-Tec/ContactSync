@@ -12,9 +12,10 @@ import "react-native-reanimated";
 import "../global.css";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { ThemedView } from "@/components/ThemedView";
-import { ThemedText } from "@/components/ThemedText";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, View, Image } from "react-native";
+import { ContactsProvider } from "@/context/ContactsContext";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -26,14 +27,18 @@ function RootLayoutNav() {
 
   if (loading) {
     return (
-      <ThemedView style={{ flex: 1 }}>
-        <ThemedText>Loading...</ThemedText>
-      </ThemedView>
+      <View className="flex-1 bg-[#000033] items-center justify-center">
+        <ActivityIndicator size="large" color="#0a7ea4" />
+        <Image
+          source={require("@/assets/images/logo.png")}
+          className="w-72 h-72"
+        />
+      </View>
     );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         {session ? (
           <Stack.Screen name="(tabs)" />
@@ -63,7 +68,13 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <ContactsProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <BottomSheetModalProvider>
+            <RootLayoutNav />
+          </BottomSheetModalProvider>
+        </GestureHandlerRootView>
+      </ContactsProvider>
     </AuthProvider>
   );
 }

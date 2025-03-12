@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  SectionList,
+} from "react-native";
 
 // Define your Contact interface
 export interface Contact {
@@ -31,8 +38,8 @@ function levenshtein(a: string, b: string): number {
       } else {
         matrix[i][j] = Math.min(
           matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
+          matrix[i][j - 1] + 1, // insertion
+          matrix[i - 1][j] + 1 // deletion
         );
       }
     }
@@ -102,17 +109,20 @@ const MergeContactsComponent: React.FC<MergeContactsComponentProps> = ({
   onMerge,
 }) => {
   const [duplicateGroups, setDuplicateGroups] = useState<Contact[][]>([]);
+  const [isMerging, setIsMerging] = useState(false);
 
   useEffect(() => {
     const groups = groupDuplicateContacts(contacts);
     setDuplicateGroups(groups);
   }, [contacts]);
 
-  const handleMerge = (group: Contact[]) => {
-    // Simple merge logic: take the first contact as the base,
-    // and merge emails and phone numbers from the rest.
-    const mergedContact: Contact = { ...group[0] };
+  const handleMerge = async (group: Contact[]) => {
+    setIsMerging(true);
+    // Simulate an async merge process (replace with your actual logic)
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
+    // Merge logic: take the first contact as base and add emails/phoneNumbers from the rest.
+    const mergedContact: Contact = { ...group[0] };
     const emailsSet = new Set<string>();
     const phoneSet = new Set<string>();
 
@@ -126,47 +136,61 @@ const MergeContactsComponent: React.FC<MergeContactsComponentProps> = ({
     });
 
     mergedContact.emails = Array.from(emailsSet).map((email) => ({ email }));
-    mergedContact.phoneNumbers = Array.from(phoneSet).map((number) => ({ number }));
+    mergedContact.phoneNumbers = Array.from(phoneSet).map((number) => ({
+      number,
+    }));
 
     if (onMerge) {
       onMerge(mergedContact, group);
     } else {
       Alert.alert("Merged", `Merged ${group.length} contacts into one.`);
     }
+    setIsMerging(false);
   };
+
+  // Create sections for the SectionList where each section is one duplicate group.
+  const sections = duplicateGroups.map((group, index) => ({
+    title: `Duplicate Group ${index + 1} (${group.length} contacts)`,
+    data: group,
+  }));
 
   return (
     <View className="p-4">
-      {duplicateGroups.length === 0 ? (
+      {sections.length === 0 ? (
         <Text className="text-center text-gray-600">
           No duplicate contacts found.
         </Text>
       ) : (
-        duplicateGroups.map((group, index) => (
-          <View
-            key={index}
-            className="mb-4 p-4 border border-gray-300 rounded-lg"
-          >
-            <Text className="font-bold mb-2">
-              Duplicate Group {index + 1} ({group.length} contacts)
+        <SectionList
+          sections={sections}
+          keyExtractor={(item, index) => (item.id ? item.id : index.toString())}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text className="font-bold mb-2">{title}</Text>
+          )}
+          renderItem={({ item }) => (
+            <Text className="text-base">
+              {item.name} -{" "}
+              {item.phoneNumbers
+                ?.map((p) => p.number)
+                .filter(Boolean)
+                .join(", ")}
             </Text>
-            {group.map((contact, i) => (
-              <Text key={contact.id || i.toString()} className="text-base">
-                {contact.name} -{" "}
-                {contact.phoneNumbers
-                  ?.map((p) => p.number)
-                  .filter(Boolean)
-                  .join(", ")}
-              </Text>
-            ))}
+          )}
+          renderSectionFooter={({ section }) => (
             <TouchableOpacity
-              onPress={() => handleMerge(group)}
-              className="mt-2 bg-green-500 p-2 rounded-lg"
+              onPress={() => handleMerge(section.data)}
+              disabled={isMerging}
+              className="mt-2 bg-green-500 p-2 rounded-lg flex-row items-center justify-center"
             >
-              <Text className="text-white text-center">Merge</Text>
+              {isMerging ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-white text-center">Merge</Text>
+              )}
             </TouchableOpacity>
-          </View>
-        ))
+          )}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
       )}
     </View>
   );
