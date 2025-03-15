@@ -19,7 +19,6 @@ const ContactFormBottomSheet = forwardRef<
   // Local state to control the date picker visibility
   const [showDatePicker, setShowDatePicker] = useState(false);
   // console.log({ control });
-  console.log({ requiredFieldsMissing });
 
   return (
     <BottomSheetModal

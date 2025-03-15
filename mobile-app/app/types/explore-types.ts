@@ -10,7 +10,7 @@ export type CartItem = {
 
 export type TradeContactProps = {
   contact: any;
-  onTrade: () => void;
+  onTrade?: () => void;
   trading?: boolean;
 };
 
@@ -25,3 +25,21 @@ export type FormData = {
   sex: string;
   contactType: string;
 };
+
+export interface Contact {
+  id: string;
+  name: string;
+  contact_type: "personal" | "work" | "family" | "other";
+  phones: Array<{
+    number: string;
+    type: "mobile" | "home" | "work" | "other";
+  }>;
+  emails: Array<{
+    email: string;
+    type: "personal" | "work" | "other";
+  }>;
+  dob: Date;
+  sex: string;
+  country: string;
+  country_code: string;
+}

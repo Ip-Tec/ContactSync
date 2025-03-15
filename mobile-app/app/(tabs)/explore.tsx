@@ -1,16 +1,16 @@
 import React, { useRef, useState } from "react";
-import { View, Animated, Dimensions, TouchableOpacity } from "react-native";
+import { View, Animated, Dimensions } from "react-native";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
-import { useForm } from "react-hook-form";
-import { useCart } from "@/context/CartContext";
+import { useSearch } from "@/hooks/useSearch";
+import useTradeableContacts from "@/hooks/useTradeableContacts";
 import ExploreHeader from "@/components/explore/ExploreHeader";
 import TradeContactItem from "@/components/explore/TradeContactItem";
-import ContactFormBottomSheet from "@/components/explore/ContactFormBottomSheet";
-import useTradeableContacts from "@/hooks/useTradeableContacts";
 import RandomBuyContact from "@/components/RandomBuyContact";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useSearch } from "@/hooks/useSearch"; // Import the hook
-import { Contact, FormData } from "@/types/explore-types"; // Adjust the path as necessary
+import { useForm } from "react-hook-form";
+import { FormData, Contact } from "@/types/explore-types";
+import ContactFormBottomSheet from "@/components/explore/ContactFormBottomSheet";
+import { useCart } from "@/context/CartContext";
 import { useRouter } from "expo-router";
 
 interface ExploreScreenProps {
@@ -18,115 +18,112 @@ interface ExploreScreenProps {
 }
 
 const HEADER_MAX_HEIGHT = 220;
-const HEADER_MIN_HEIGHT = 70; // minimum height equals the search bar height
+const HEADER_MIN_HEIGHT = 70;
 const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
-const TAB_BAR_HEIGHT = 48; // adjust as needed
+const TAB_BAR_HEIGHT = 48;
+
+const routes = [
+  { key: "tradeable", title: "Tradeable Contacts" },
+  { key: "buyContact", title: "Buy Contact" },
+];
 
 const ExploreScreen: React.FC<ExploreScreenProps> = ({ userId }) => {
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [index, setIndex] = useState(0);
-  const [routes] = useState([
-    { key: "tradeable", title: "Tradeable" },
-    { key: "buyContact", title: "Buy Contact" },
-  ]);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const { addToCart } = useCart();
+  const { control, handleSubmit, reset } = useForm<FormData>();
 
-  // Get contacts from your custom hook
+  // Get tradeable contacts via your custom hook
   const { tradeableContacts } = useTradeableContacts(userId);
   // Use the search hook to filter contacts based on the search query.
   const { searchQuery, setSearchQuery, filteredData } = useSearch(
     tradeableContacts,
-    (item: Contact, query: string) => {
-      // Adjust the filtering logic as needed. For example, filter by name.
-      return item.name
-        ? item.name.toLowerCase().includes(query.toLowerCase())
-        : false;
-    }
+    (item, query) =>
+      item.name?.toLowerCase().includes(query.toLowerCase()) || false
   );
 
-  const { control, handleSubmit, reset } = useForm<FormData>();
-  const [selectedContact, setSelectedContact] = useState<any | null>(null);
-  const { addToCart } = useCart();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-
-  // Animate header height from 220 to 70
   const headerHeight = scrollY.interpolate({
     inputRange: [0, HEADER_SCROLL_DISTANCE],
     outputRange: [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT],
     extrapolate: "clamp",
   });
 
-  const handleTrade = (data: FormData) => {
-    if (!selectedContact) return;
+  // Helper type guard function
+  function isDefined<T>(value: T | undefined): value is T {
+    return value !== undefined;
+  }
 
-    const uniquePhones = [
-      ...new Set(
-        selectedContact.phoneNumbers?.map((p: any) => p.number).filter(Boolean)
-      ),
-    ];
+  const handleTrade = (contact: Contact) => {
+    if (
+      !contact.isInDb &&
+      (!contact.dob || !contact.country || !contact.countryCode || !contact.sex)
+    ) {
+      setSelectedContact(contact);
+      bottomSheetRef.current?.present();
+    } else {
+      const phoneNumbers: string[] = (contact.phoneNumbers || [])
+  .map(p => p.number)
+  .filter((n): n is string => typeof n === "string");
 
-    addToCart({
-      ...selectedContact,
-      ...data,
-      phoneNumbers: uniquePhones,
-      id: selectedContact.id || Date.now().toString(),
-    });
+      const emails: string[] = (contact.emails || [])
+        .map((e) => e.email)
+        .filter((e): e is string => typeof e === "string");
 
+      addToCart({
+        id: contact.id?.toString() || Date.now().toString(),
+        contact,
+        phoneNumbers,
+        emails,
+        dob: contact.dob ? new Date(contact.dob).toISOString() : undefined,
+        country: contact.country,
+        countryCode: contact.countryCode,
+        sex: contact.sex,
+      });
+    }
+  };
+
+  const handleFormSubmit = (data: FormData) => {
+    if (selectedContact) {
+      const phoneNumbers: string[] = (selectedContact.phoneNumbers || [])
+        .map((p) => p.number)
+        .filter(isDefined);
+      const emails: string[] = (selectedContact.emails || [])
+        .map((e) => e.email)
+        .filter(isDefined);
+
+      addToCart({
+        id: selectedContact.id?.toString() || Date.now().toString(),
+        contact: selectedContact,
+        phoneNumbers: phoneNumbers.filter(isDefined) as string[],
+        emails: emails.filter(isDefined) as string[],
+        dob: data.dob ? new Date(data.dob).toISOString() : undefined,
+        country: data.country,
+        countryCode: data.countryCode,
+        sex: data.sex,
+        contactType: data.contactType,
+        ...data,
+      });
+    }
     bottomSheetRef.current?.dismiss();
+    setSelectedContact(null);
     reset();
   };
 
-  // Define scenes for the tabs, using filteredData for the Tradeable tab
+  // Define scenes for the TabView.
   const renderScene = SceneMap({
     tradeable: () => (
-      <Animated.FlatList
+      <Animated.FlatList<Contact>
         data={filteredData}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id?.toString() || Date.now().toString()}
         contentContainerStyle={{
           paddingTop: HEADER_MAX_HEIGHT + TAB_BAR_HEIGHT,
           paddingBottom: 100,
         }}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/ContactDetail",
-                params: { contact: JSON.stringify(item) },
-              })
-            }
-          >
-            <TradeContactItem
-              contact={item}
-              onTrade={() => {
-                console.log("Trade button clicked for:", item);
-                if (!item.isInDb) {
-                  if (
-                    !item.dob ||
-                    !item.country ||
-                    !item.countryCode ||
-                    !item.sex
-                  ) {
-                    setSelectedContact(item);
-                    setTimeout(() => {
-                      bottomSheetRef.current?.present();
-                    }, 200); // Small delay to ensure UI updates
-                  } else {
-                    addToCart({
-                      id: item.id || Date.now().toString(),
-                      contact: item,
-                      phoneNumbers: item.phoneNumbers
-                        ? item.phoneNumbers.map((p) => p.number)
-                        : [],
-                      dob: item.dob ? item.dob.toISOString() : undefined,
-                      country: item.country,
-                      countryCode: item.countryCode,
-                      sex: item.sex,
-                    });
-                  }
-                }
-              }}
-            />
-          </TouchableOpacity>
+          <TradeContactItem contact={item} onTrade={() => handleTrade(item)} />
         )}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -147,14 +144,14 @@ const ExploreScreen: React.FC<ExploreScreenProps> = ({ userId }) => {
         )}
         scrollEventThrottle={16}
       >
-        <RandomBuyContact />
+        <RandomBuyContact contactLimit={20} />
       </Animated.ScrollView>
     ),
   });
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Animated Header (background + search) */}
+      {/* Animated Header */}
       <Animated.View
         style={{
           position: "absolute",
@@ -172,7 +169,7 @@ const ExploreScreen: React.FC<ExploreScreenProps> = ({ userId }) => {
         />
       </Animated.View>
 
-      {/* Tab View with pinned TabBar */}
+      {/* TabView with pinned TabBar */}
       <TabView
         navigationState={{ index, routes }}
         onIndexChange={setIndex}
@@ -201,12 +198,12 @@ const ExploreScreen: React.FC<ExploreScreenProps> = ({ userId }) => {
         initialLayout={{ width: Dimensions.get("window").width }}
       />
 
-      {/* Bottom Sheet for contact form */}
+      {/* Bottom Sheet for Completing Contact Data */}
       <ContactFormBottomSheet
         ref={bottomSheetRef}
         control={control}
-        onSubmit={handleSubmit(handleTrade)}
-        requiredFieldsMissing={false}
+        onSubmit={handleSubmit(handleFormSubmit)}
+        requiredFieldsMissing={!selectedContact}
       />
     </View>
   );

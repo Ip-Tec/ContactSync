@@ -1,12 +1,19 @@
 // ContactsContext.tsx
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from "react";
 import * as Contacts from "expo-contacts";
+import { supabase } from "@/lib/supabase";
+import { Contact as ContactType } from "@/app/types/explore-types";
+import { Alert } from "react-native";
 
-export interface Contact {
-  id: string;
-  name: string;
-  emails?: { email: string; label?: string }[];
-  phoneNumbers?: { number: string }[];
+export interface Contact extends Contacts.Contact {
+  // Expo's Contact already has required properties like `contactType`
+  // Add your custom properties as optional:
   isInDb?: boolean;
   dob?: Date;
   country?: string;
@@ -14,24 +21,28 @@ export interface Contact {
   sex?: string;
 }
 
-interface ContactsContextProps {
-  contacts: Contact[];
-  loading: boolean;
-  reloadContacts: () => void;
-}
-
 // Helper function to merge/normalize values.
 // It accepts a string or an array of strings, applies a normalization function,
 // filters out empty values, and returns a deduplicated array.
-const mergeValues = (
+function mergeValues(
   input: string | string[] | undefined,
   normalizeFn: (s: string) => string
-): string[] => {
+): string[] {
   if (!input) return [];
   const arr = Array.isArray(input) ? input : [input];
   const normalized = arr.map(normalizeFn).filter(Boolean);
   return Array.from(new Set(normalized));
-};
+}
+
+interface ContactsContextProps {
+  contacts: Contact[];
+  loading: boolean;
+  reloadContacts: () => void;
+  getRandomContacts: (limit: number) => Promise<any[]>;
+  addContact: (contactData: ContactType) => Promise<string | null>;
+  deleteContact: (contactId: number) => Promise<boolean>;
+  updateContact: (contactId: number, updates: ContactType) => Promise<boolean>;
+}
 
 const ContactsContext = createContext<ContactsContextProps | undefined>(
   undefined
@@ -52,7 +63,6 @@ export const ContactsProvider: React.FC<{ children: React.ReactNode }> = ({
           fields: [Contacts.Fields.Emails, Contacts.Fields.PhoneNumbers],
         });
 
-        // Filter out contacts without a valid name (ignore "", "null", or "unknown")
         const filteredData = (data || []).filter((contact) => {
           if (!contact.name) return false;
           const name = contact.name.trim().toLowerCase();
@@ -60,11 +70,10 @@ export const ContactsProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         const uniqueContacts = filteredData.map((contact) => {
-          // For name, we simply trim and take the first value.
-          const mergedNameArray = mergeValues(contact.name, (s) => s.trim());
+          const mergedNameArray = [contact.name.trim()];
           const mergedName = mergedNameArray[0] || "";
 
-          // For emails, map to string array then merge (trim, lowercase) and map back to objects.
+          // For emails, map each email object to its email string.
           const mergedEmails =
             contact.emails &&
             mergeValues(
@@ -74,13 +83,13 @@ export const ContactsProvider: React.FC<{ children: React.ReactNode }> = ({
               (s) => s.trim().toLowerCase()
             ).map((email) => ({ email }));
 
-          // For phone numbers, map to string array then merge (remove non-digits except +) and map back.
+          // For phone numbers, map each phone object to its number.
           const mergedPhones =
             contact.phoneNumbers &&
             mergeValues(
               contact.phoneNumbers
                 .map((p) => p.number)
-                .filter((number): number is string => number !== undefined),
+                .filter((n): n is string => n !== undefined),
               (s) => s.replace(/[^0-9+]/g, "").trim()
             ).map((number) => ({ number }));
 
@@ -89,10 +98,10 @@ export const ContactsProvider: React.FC<{ children: React.ReactNode }> = ({
             name: mergedName,
             emails: mergedEmails || [],
             phoneNumbers: mergedPhones || [],
-          };
+          } as Contact;
         });
 
-        setContacts(uniqueContacts as Contact[]);
+        setContacts(uniqueContacts);
       }
     } catch (error) {
       console.error("Failed to load contacts:", error);
@@ -104,9 +113,169 @@ export const ContactsProvider: React.FC<{ children: React.ReactNode }> = ({
     loadContacts();
   }, []);
 
+  const getRandomContacts = useCallback(
+    async (limit: number = 20): Promise<any[]> => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*, phone_numbers(*), emails(*)")
+        .limit(limit);
+
+      if (error) {
+        Alert.alert("Error fetching contacts:", error.message);
+        return [];
+      }
+      return data?.sort(() => Math.random() - 0.5) || [];
+    },
+    []
+  );
+
+  const addContact = async (contactData: {
+    name: string;
+    country?: string;
+    country_code?: string;
+    date_of_birth?: string;
+    sex?: string;
+    contact_type?: "personal" | "work" | "family" | "other";
+    phones: { number: string; type: "mobile" | "home" | "work" | "other" }[];
+    emails: { email: string; type: "personal" | "work" | "other" }[];
+  }) => {
+    // Insert the main contact
+    const { data, error } = await supabase
+      .from("contacts")
+      .insert([
+        {
+          name: contactData.name,
+          country: contactData.country,
+          country_code: contactData.country_code,
+          date_of_birth: contactData.date_of_birth,
+          sex: contactData.sex,
+          contact_type: contactData.contact_type || "personal",
+        },
+      ])
+      .select();
+
+    if (error) {
+      console.error("Error inserting contact:", error.message);
+      return null;
+    }
+
+    const contactId = data[0]?.id;
+    if (!contactId) return null;
+
+    // Insert phone numbers
+    if (contactData.phones.length > 0) {
+      await supabase.from("phone_numbers").insert(
+        contactData.phones.map((phone) => ({
+          contact_id: contactId,
+          number: phone.number,
+          type: phone.type,
+        }))
+      );
+    }
+
+    // Insert emails
+    if (contactData.emails.length > 0) {
+      await supabase.from("emails").insert(
+        contactData.emails.map((email) => ({
+          contact_id: contactId,
+          email: email.email,
+          type: email.type,
+        }))
+      );
+    }
+
+    return contactId;
+  };
+
+  const updateContact = async (
+    contactId: number,
+    updates: {
+      name?: string;
+      country?: string;
+      country_code?: string;
+      date_of_birth?: string;
+      sex?: string;
+      contact_type?: "personal" | "work" | "family" | "other";
+      phones?: {
+        id?: number;
+        number: string;
+        type: "mobile" | "home" | "work" | "other";
+      }[];
+      emails?: {
+        id?: number;
+        email: string;
+        type: "personal" | "work" | "other";
+      }[];
+    }
+  ) => {
+    const { error } = await supabase
+      .from("contacts")
+      .update(updates)
+      .eq("id", contactId);
+
+    if (error) {
+      console.error("Error updating contact:", error.message);
+      return false;
+    }
+
+    // Update or insert phone numbers
+    if (updates.phones) {
+      for (let phone of updates.phones) {
+        if (phone.id) {
+          // Update existing phone
+          await supabase.from("phone_numbers").update(phone).eq("id", phone.id);
+        } else {
+          // Insert new phone
+          await supabase
+            .from("phone_numbers")
+            .insert([{ ...phone, contact_id: contactId }]);
+        }
+      }
+    }
+
+    // Update or insert emails
+    if (updates.emails) {
+      for (let email of updates.emails) {
+        if (email.id) {
+          // Update existing email
+          await supabase.from("emails").update(email).eq("id", email.id);
+        } else {
+          // Insert new email
+          await supabase
+            .from("emails")
+            .insert([{ ...email, contact_id: contactId }]);
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const deleteContact = async (contactId: number) => {
+    const { error } = await supabase
+      .from("contacts")
+      .delete()
+      .eq("id", contactId);
+
+    if (error) {
+      console.error("Error deleting contact:", error.message);
+      return false;
+    }
+
+    return true;
+  };
+
   return (
     <ContactsContext.Provider
-      value={{ contacts, loading, reloadContacts: loadContacts }}
+      value={{
+        contacts,
+        loading,
+        reloadContacts: loadContacts,
+        getRandomContacts,
+        addContact,
+        updateContact,
+        deleteContact,
+      }}
     >
       {children}
     </ContactsContext.Provider>

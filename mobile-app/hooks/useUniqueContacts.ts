@@ -24,7 +24,7 @@ export function useUniqueContacts(limit: number, defaultCountryCode?: string) {
   useEffect(() => {
     async function fetchDBContacts() {
       setLoading(true);
-      const { data, error } = await supabase.from("Contact").select("*");
+      const { data, error } = await supabase.from("contacts").select("*");
       if (error) {
         console.error("Error fetching DB contacts:", error.message);
         setError(error.message);

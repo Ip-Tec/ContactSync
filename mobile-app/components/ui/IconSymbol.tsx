@@ -38,6 +38,7 @@ const MAPPING = {
   "whatshot.fill": "whatshot",
   "flag.fill": "flag",
   "pencil.circle.fill": "edit",
+  "shopping.cart": "shopping-cart",
 } as unknown as Partial<
   Record<
     import("expo-symbols").SymbolViewProps["name"],
@@ -57,12 +58,14 @@ export function IconSymbol({
   size = 24,
   color,
   style,
+  className,
 }: {
   name: IconSymbolName;
   size?: number;
-  color: string | OpaqueColorValue;
+  color?: string | OpaqueColorValue;
   style?: StyleProp<ViewStyle>;
   weight?: SymbolWeight;
+  className?: string;
 }) {
   return (
     <MaterialIcons
@@ -70,6 +73,7 @@ export function IconSymbol({
       size={size}
       name={MAPPING[name]}
       style={style as StyleProp<TextStyle>}
+      className={className}
     />
   );
 }

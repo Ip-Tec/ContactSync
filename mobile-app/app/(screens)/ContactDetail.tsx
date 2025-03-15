@@ -7,7 +7,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { BottomSheetModal, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useForm, Controller } from "react-hook-form";
@@ -103,7 +103,15 @@ const ContactDetail: React.FC = () => {
           )}
           <TouchableOpacity
             className="absolute top-4 right-4 bg-blue-500 p-2 rounded-full"
-            onPress={() => bottomSheetRef.current?.present()}
+            onPress={() =>
+              router.push({
+                pathname: "/EditContact",
+                params: {
+                  contact: JSON.stringify(contactData),
+                  isUpdate: "false",
+                },
+              })
+            }
           >
             <IconSymbol name="pencil.circle.fill" size={28} color="#fff" />
           </TouchableOpacity>
