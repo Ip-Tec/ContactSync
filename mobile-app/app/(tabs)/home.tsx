@@ -9,12 +9,12 @@ import {
   View,
   Linking,
   Text,
-  Alert,
 } from "react-native";
-import { supabase } from "@/lib/supabase";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/ui/IconSymbol";
-import PaymentWebView from "@/components/payment/PaymentWebView"; // WebView modal for payment
+import PaymentWebView from "@/components/payment/PaymentWebView"; // Payment webview
 import ImportContactModal from "@/components/data/ImportContactModal"; // Import contact modal (wrapped in a BottomSheet)
+import { useAuth } from "@/context/AuthContext";
 
 const HEADER_MAX_HEIGHT = 220;
 const HEADER_MIN_HEIGHT = 70;
@@ -50,16 +50,8 @@ const getIconForPackage = (name: string): string => {
   return "money-sign";
 };
 
-export default function HomeScreen() {
-  const [priceData, setPriceData] = useState<
-    {
-      price: number;
-      number_of_contacts: number;
-      name: string;
-      payment_url: string;
-    }[]
-  >([]);
-  const [loadingPrice, setLoadingPrice] = useState(true);
+const HomeScreen = () => {
+  const { priceData, loadingPrice } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState<{
     price: number;
     number_of_contacts: number;
@@ -72,25 +64,30 @@ export default function HomeScreen() {
   const [importContactModalVisible, setImportContactModalVisible] =
     useState(false);
 
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  const flatListRef = useRef<FlatList>(null);
+  const scrollInterval = useRef<NodeJS.Timeout | null>(null);
   // Fetch pricing data from Supabase.
+
   useEffect(() => {
-    async function fetchPriceData() {
-      setLoadingPrice(true);
-      const { data, error } = await supabase
-        .from("Price")
-        .select("price, number_of_contacts, name, payment_url");
-      if (error) {
-        console.error("Error fetching price data:", error.message);
-      } else if (data && data.length > 0) {
-        const sortedData = data.sort((a, b) => a.price - b.price);
-        setPriceData(sortedData);
-      } else {
-        console.error("No price data found.");
-      }
-      setLoadingPrice(false);
+    if (autoScrollEnabled && ads.length > 1) {
+      scrollInterval.current = setInterval(() => {
+        setCurrentAdIndex((prev) => {
+          const nextIndex = prev + 1 >= ads.length ? 0 : prev + 1;
+          flatListRef.current?.scrollToIndex({
+            index: nextIndex,
+            animated: true,
+          });
+          return nextIndex;
+        });
+      }, 3000); // Change slide every 3 seconds
+
+      return () => {
+        if (scrollInterval.current) clearInterval(scrollInterval.current);
+      };
     }
-    fetchPriceData();
-  }, []);
+  }, [autoScrollEnabled, ads.length]);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -138,8 +135,19 @@ export default function HomeScreen() {
   );
 
   const renderAdItem = ({ item }: { item: (typeof ads)[0] }) => (
-    <TouchableOpacity onPress={() => Linking.openURL(item.link)}>
-      <Image source={item.image} className="w-48 h-30 rounded-xl mr-4" />
+    <TouchableOpacity
+      onPress={() => Linking.openURL(item.link)}
+      className="mx-2 h-80 w-80" // Fixed height
+    >
+      <View className="rounded-xl overflow-hidden shadow-md bg-white h-full aspect-square">
+        <Image
+          source={item.image}
+          className="w-full h-full"
+          style={{
+            resizeMode: "cover",
+          }}
+        />
+      </View>
     </TouchableOpacity>
   );
 
@@ -179,15 +187,47 @@ export default function HomeScreen() {
   };
 
   const renderAds = () => (
-    <View className="mt-5">
+    <View className="mt-5 py-4 bg-gray-100">
+      <Text className="text-xl font-bold mb-4 px-4">Featured Offers</Text>
       <FlatList
+        ref={flatListRef}
         data={ads}
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id}
         renderItem={renderAdItem}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingBottom: 8,
+        }}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        snapToInterval={256 + 16} // width + margin (64*4 + 16)
+        onScrollBeginDrag={() => setAutoScrollEnabled(false)} // Pause on user interaction
+        onScrollEndDrag={() => setAutoScrollEnabled(true)} // Resume after interaction
+        onMomentumScrollEnd={(event) => {
+          const contentOffset = event.nativeEvent.contentOffset;
+          const viewSize = event.nativeEvent.layoutMeasurement;
+          const pageNum = Math.floor(contentOffset.x / viewSize.width);
+          setCurrentAdIndex(pageNum);
+        }}
+        getItemLayout={(data, index) => ({
+          length: 256 + 16, // width + margin
+          offset: (256 + 16) * index,
+          index,
+        })}
       />
+      {/* Add indicator dots */}
+      <View className="flex-row justify-center mt-2">
+        {ads.map((_, index) => (
+          <View
+            key={index}
+            className={`w-2 h-2 rounded-full mx-1 ${
+              index === currentAdIndex ? "bg-blue-500" : "bg-gray-300"
+            }`}
+          />
+        ))}
+      </View>
     </View>
   );
 
@@ -208,7 +248,10 @@ export default function HomeScreen() {
       {selectedPackage && paymentWebViewVisible && (
         <PaymentWebView
           visible={paymentWebViewVisible}
-          url={selectedPackage.payment_url}
+          amount={selectedPackage.price} // 150 USD/Naira
+          currency="NGN"
+          apiKey="1PUB5094Al68bg9Zw9KBqVKiuo2xTuilesNCya"
+          apiSecret="1PRI5094Ms0YLNyDIQo0IEkVFD67x1NW8S1n2S"
           onPaymentSuccess={() => {
             // When payment is successful, close the WebView and open the ImportContactModal.
             setPaymentWebViewVisible(false);
@@ -228,16 +271,6 @@ export default function HomeScreen() {
       )}
     </View>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  headerContainer: {
-    backgroundColor: "#D0D0D0",
-    overflow: "hidden",
-  },
-  headerImage: {
-    width: "100%",
-    height: HEADER_MAX_HEIGHT,
-    resizeMode: "cover",
-  },
-});
+export default HomeScreen;

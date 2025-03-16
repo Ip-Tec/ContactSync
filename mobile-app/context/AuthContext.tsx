@@ -6,7 +6,12 @@ import { useToast } from "react-native-toast-notifications";
 type AuthContextType = {
   session: Session | null;
   loading: boolean;
-  priceData: { price: number; number_of_contacts: number }[];
+  priceData: {
+    name: string;
+    price: number;
+    number_of_contacts: number;
+    payment_url: string;
+  }[];
   loadingPrice: boolean;
   signIn: (
     email: string,
@@ -40,7 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [priceData, setPriceData] = useState<
-    { price: number; number_of_contacts: number }[]
+    {
+      name: string;
+      price: number;
+      number_of_contacts: number;
+      payment_url: string;
+    }[]
   >([]);
   const [loadingPrice, setLoadingPrice] = useState(true);
 
@@ -49,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
       setLoading(false);
+      fetchPriceData();
     };
 
     fetchSession();
@@ -69,12 +80,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoadingPrice(true);
     const { data, error } = await supabase.from("Price").select("*");
     if (error) {
-      console.error("Error fetching price data:", error.message);
+      toast.show("Error fetching price data: " + error.message, {
+        type: "error",
+      }); // Add this line
     } else if (data && data.length > 0) {
       const sortedData = data.sort((a, b) => a.price - b.price);
       setPriceData(sortedData);
     } else {
-      console.error("No price data found.");
+      toast.show("No price data found.", { type: "error" }); // Add this line
     }
     setLoadingPrice(false);
   };
@@ -116,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     return null;
   };
-  
+
   const changePhoneNumber = async (
     newPhoneNumber: string
   ): Promise<AuthError | null> => {
