@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import * as Contacts from "expo-contacts";
-import { Alert, Platform, PermissionsAndroid } from "react-native";
+import { Alert, Platform, PermissionsAndroid, Linking } from "react-native";
 
 const RequestPermissions: React.FC = () => {
   useEffect(() => {
@@ -14,28 +14,6 @@ const RequestPermissions: React.FC = () => {
           "Contacts permission was not granted."
         );
       }
-
-      // Request SMS permission on Android (iOS doesn't require this)
-      if (Platform.OS === "android") {
-        try {
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.SEND_SMS,
-            {
-              title: "SMS Permission",
-              message: "This app requires access to send SMS messages.",
-              buttonNeutral: "Ask Me Later",
-              buttonNegative: "Cancel",
-              buttonPositive: "OK",
-            }
-          );
-          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-            Alert.alert("SMS Permission", "SMS permission was not granted.");
-          }
-        } catch (error) {
-          console.warn("SMS permission error:", error);
-        }
-      }
-      // Email and WhatsApp usually do not require explicit permissions.
     };
 
     requestAllPermissions();
@@ -43,5 +21,20 @@ const RequestPermissions: React.FC = () => {
 
   return null;
 };
+// New exported function to toggle contacts permissions
+export async function toggleContactsPermission() {
+  const { status } = await Contacts.getPermissionsAsync();
+
+  if (status === "granted") {
+    return true;
+  } else {
+    const { status: newStatus } = await Contacts.requestPermissionsAsync();
+    if (newStatus === "granted") {
+      return true;
+    }
+
+    return false;
+  }
+}
 
 export default RequestPermissions;

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   Switch,
   TouchableOpacity,
@@ -20,6 +20,8 @@ import { useToast } from "react-native-toast-notifications";
 import AccountSettingsBottomSheet from "@/components/ui/AccountSettingsBottomSheet";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
+import Constants from "expo-constants";
+import { toggleContactsPermission } from "@/components/RequestPermissions";
 
 const ProfileScreen = () => {
   const toast = useToast();
@@ -40,6 +42,28 @@ const ProfileScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isNotificationEnabled, setIsNotificationEnabled] =
     useState<boolean>(false);
+
+  const [allowContactAccess, setAllowContactAccess] = useState<boolean>(false);
+
+  const handlePermissionToggle = async (value: boolean) => {
+    const result = await toggleContactsPermission();
+    setAllowContactAccess(result);
+
+    // Add visual feedback
+    if (result) {
+      toast.show("Contacts access enabled", { type: "success" });
+    } else {
+      toast.show("Contacts access disabled", { type: "warning" });
+    }
+  };
+
+  useEffect(() => {
+    const checkInitialPermission = async () => {
+      const { status } = await Contacts.getPermissionsAsync();
+      setAllowContactAccess(status === "granted");
+    };
+    checkInitialPermission();
+  }, []);
 
   const mergeDuplicates = async () => {
     try {
@@ -140,40 +164,28 @@ const ProfileScreen = () => {
           </ThemedText>
         </ThemedView>
 
-        {/* Theme Switch */}
-        <View className="flex-row items-center justify-between mb-4">
-          <ThemedText className="text-lg">Dark Theme</ThemedText>
-          <Switch
-            value={isDarkTheme}
-            onValueChange={() =>
-              setIsDarkTheme((previousState) => !previousState)
-            }
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={isDarkTheme ? "#000033" : "#f4f3f4"}
-          />
-        </View>
-
-        {/* Navigation Button to Form Screen */}
-        <TouchableOpacity
-          onPress={handleOpenSettingsForm}
-          className="bg-blue-500 py-4 rounded-lg items-center mt-4"
-        >
-          <Text className="text-white font-bold text-lg">
-            Open Settings Form
-          </Text>
-        </TouchableOpacity>
-
         {/* Account Information */}
-        <ThemedView className="mb-8">
-          <ThemedText type="subtitle" className="mb-2">
-            Account Information
-          </ThemedText>
-          <ThemedText>Email: {session?.user?.email}</ThemedText>
-          <ThemedText>
-            User ID: {session?.user?.id.substring(0, 8)}...
-          </ThemedText>
-          <ThemedText>Phone: {session?.user?.phone}</ThemedText>
-        </ThemedView>
+        <View className="mb-8 bg-gray-200 rounded-lg p-2">
+          <View className="flex-col items-center justify-between border-b border-gray-300 px-4 py-3">
+            <Text className="text-lg text-gray-800 text-justify w-full">
+              Account Information
+            </Text>
+          </View>
+          <Text className="text-sm mt-1 p-2 mx-2 text-bold border-b border-gray-300 text-gray-500">
+            Your personal account information is displayed below. This includes
+            your email address, unique user ID, and phone number. You can use
+            this information to manage your account settings and preferences.
+          </Text>
+          <Text className="px-4 py-3 border-b border-gray-300 text-gray-800">
+            Email: {session?.user?.email}
+          </Text>
+          <Text className="px-4 py-3 border-b border-gray-300 text-gray-800">
+            User ID: <Text className="text-gray-600">{session?.user?.id}</Text>
+          </Text>
+          <Text className="px-4 py-3 text-gray-800">
+            Phone: {session?.user?.phone}
+          </Text>
+        </View>
 
         {/* Auto Merge Duplicates Toggle */}
         <View className="mb-8 bg-gray-200 rounded-lg">
@@ -190,26 +202,6 @@ const ProfileScreen = () => {
           </View>
           <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
             When enabled, duplicate contacts will be merged automatically.
-          </Text>
-        </View>
-
-        {/* Notifications Settings */}
-        <View className="mb-8 bg-gray-200 rounded-lg">
-          <View className="flex-row items-center justify-between border-b border-gray-300 px-4 py-3">
-            <ThemedText className="text-lg text-gray-800">
-              Enable Notifications
-            </ThemedText>
-            <Switch
-              value={isNotificationEnabled}
-              onValueChange={() =>
-                setIsNotificationEnabled((prevState) => !prevState)
-              }
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={isNotificationEnabled ? "#000033" : "#f4f3f4"}
-            />
-          </View>
-          <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
-            Enable notifications to receive updates and alerts.
           </Text>
         </View>
 
@@ -278,14 +270,24 @@ const ProfileScreen = () => {
         </View>
 
         {/* In-App Help & Support */}
-        <View className="mb-8 bg-gray-200 rounded-lg">
-          <TouchableOpacity
-            onPress={() => Linking.openURL("https://wa.me/2348084392327")}
-            className="px-4 py-3 border-b border-gray-300"
-          >
-            <Text className="text-blue-600">In-App Help & Support</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => Linking.openURL("https://wa.me/2348084392327")}
+          className="mb-8 bg-gray-200 rounded-lg border border-blue-600"
+        >
+          <View className="px-4 py-3">
+            <Text className="text-lg text-blue-600">In-App Help & Support</Text>
+          </View>
+          <Text className="text-sm mt-1 p-2 mx-2 text-gray-500">
+            Need assistance with your account or have questions about our app?
+            We're here to help! Our dedicated support team is available to
+            provide you with personalized support via WhatsApp.
+          </Text>
+          <Text className="text-sm mt-1 p-2 mx-2 text-gray-500">
+            Tap the button above to start a chat with our support team. We'll
+            respond promptly to assist you with any issues or questions you may
+            have.
+          </Text>
+        </TouchableOpacity>
 
         {/* Security Settings */}
         <View className="mb-8 bg-gray-200 rounded-lg">
@@ -317,21 +319,64 @@ const ProfileScreen = () => {
           <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
             Adjust your privacy settings to control data sharing and visibility.
           </Text>
+          <View className="flex-row items-center justify-between px-4 py-3">
+            <ThemedText className="text-sm text-gray-600">
+              Allow access to contacts
+            </ThemedText>
+            <Switch
+              value={allowContactAccess}
+              onValueChange={async (value) => {
+                handlePermissionToggle(value);
+                if (!value) {
+                  setAllowContactAccess(false);
+                  Alert.alert(
+                    "Warning",
+                    "If you do not grant access to contacts, some features of the app may not work properly.",
+                    [
+                      {
+                        text: "Access Contacts",
+                        style: "default",
+                      },
+                    ],
+                    {
+                      cancelable: true,
+                      onDismiss: async () => {
+                        setAllowContactAccess(value);
+                      },
+                    }
+                  );
+                }
+              }}
+            />
+          </View>
         </View>
 
         {/* About Section */}
-        <ThemedView className="mb-8">
-          <ThemedText type="subtitle">About</ThemedText>
-          <TouchableOpacity onPress={() => console.log("App Version")}>
-            <Text>App Version</Text>
+        <View className="mb-8 bg-gray-200 rounded-lg">
+          <View className="flex-row items-center justify-between border-b border-gray-300 px-4 py-3">
+            <ThemedText className="text-lg text-gray-800">About</ThemedText>
+          </View>
+          <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
+            Learn more about our app and its features.
+          </Text>
+          <View className="px-4 py-3 border-y border-gray-300">
+            <Text className="text-gray-800">
+              App Version: {Constants.nativeAppVersion}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => console.log("Terms & Conditions")}
+            className="px-4 py-3 border-b border-gray-300"
+          >
+            <Text className="text-gray-800">Terms & Conditions</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => console.log("Terms & Conditions")}>
-            <Text>Terms & Conditions</Text>
+          <TouchableOpacity
+            onPress={() => console.log("Privacy Policy")}
+            className="px-4 py-3"
+          >
+            <Text className="text-gray-800">Privacy Policy</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => console.log("Privacy Policy")}>
-            <Text>Privacy Policy</Text>
-          </TouchableOpacity>
-        </ThemedView>
+        </View>
 
         {/* Reset Password Button */}
 

@@ -65,8 +65,8 @@ const CartBadge = () => {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    right: 20,
-    bottom: 20,
+    left: 10,
+    bottom: 150,
     zIndex: 9999,
   },
   button: {
