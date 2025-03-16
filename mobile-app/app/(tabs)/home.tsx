@@ -250,8 +250,8 @@ const HomeScreen = () => {
           visible={paymentWebViewVisible}
           amount={selectedPackage.price} // 150 USD/Naira
           currency="NGN"
-          apiKey="1PUB5094Al68bg9Zw9KBqVKiuo2xTuilesNCya"
-          apiSecret="1PRI5094Ms0YLNyDIQo0IEkVFD67x1NW8S1n2S"
+          apiKey="your_api_key"
+          apiSecret="your_api_secret"
           onPaymentSuccess={() => {
             // When payment is successful, close the WebView and open the ImportContactModal.
             setPaymentWebViewVisible(false);
