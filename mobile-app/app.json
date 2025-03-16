@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Contact Sync",
-    "slug": "contactsync",
+    "slug": "contact-sync",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
-    "scheme": "contactsync",
+    "scheme": "contact-sync",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -79,6 +79,7 @@
       "eas": {
         "projectId": "b8e35d4a-7653-4800-9e44-5f77b1ca44d7"
       }
-    }
+    },
+    "owner": "ipcosy"
   }
 }
