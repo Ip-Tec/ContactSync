@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Contact Sync",
-    "slug": "contact-sync",
+    "slug": "contactsync",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
-    "scheme": "contact-sync",
+    "scheme": "contactsync",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

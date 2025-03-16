@@ -108,6 +108,12 @@ export default function LoginScreen() {
         {error && <Text className="text-red-500 text-center">{error}</Text>}
 
         <TouchableOpacity
+          onPress={() => router.push("./ForgotPassword")}
+          className="flex-row justify-end p-2"
+        >
+          <Text className="text-blue-500">Forgot Password?</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={handleLogin}
           disabled={loading}
           className="bg-blue-500 p-4 rounded-lg items-center mt-2"
