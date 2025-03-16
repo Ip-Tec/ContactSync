@@ -85,7 +85,8 @@ ContactSync/
 ContactSync/
 └── mobile-app/
     ├── assets/                   # Images, fonts, etc.
-    ├── src/                      # Main source
+    ├── app/     
+    |   ├── (screen)                 # Main source
     │   ├── components/           # Reusable UI components
     │   │   ├── Button.js
     │   │   ├── Card.js

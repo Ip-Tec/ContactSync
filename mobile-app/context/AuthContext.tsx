@@ -149,6 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.unlinkIdentity(identity);
     if (error) {
       toast.show(error.message, { type: "error" });
+      // log user out
+      await supabase.auth.signOut();
       return error;
     }
     return null;

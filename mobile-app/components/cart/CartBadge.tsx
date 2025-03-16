@@ -3,51 +3,51 @@ import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
 import { useCart } from "@/context/CartContext";
 import { router } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { PanGestureHandler } from "react-native-gesture-handler";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  useAnimatedGestureHandler,
 } from "react-native-reanimated";
 
 const CartBadge = () => {
   const { cart } = useCart();
+  
+  // Stores the last position when dragging ends
+  const offsetX = useSharedValue(0);
+  const offsetY = useSharedValue(0);
+
+  // Tracks current movement
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const startX = useSharedValue(0);
-  const startY = useSharedValue(0);
 
-  // If the cart is empty, don't render the badge
+  // Define the pan gesture
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      translateX.value = offsetX.value;
+      translateY.value = offsetY.value;
+    })
+    .onUpdate((event) => {
+      translateX.value = offsetX.value + event.translationX;
+      translateY.value = offsetY.value + event.translationY;
+    })
+    .onEnd(() => {
+      // Store the final position with spring effect
+      offsetX.value = withSpring(translateX.value);
+      offsetY.value = withSpring(translateY.value);
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: withSpring(translateX.value) },
+      { translateY: withSpring(translateY.value) },
+    ],
+  }));
+
   if (cart.length === 0) return null;
 
-  const gestureHandler = useAnimatedGestureHandler({
-    onStart: (_, ctx) => {
-      startX.value = translateX.value;
-      startY.value = translateY.value;
-    },
-    onActive: (event, ctx) => {
-      translateX.value = startX.value + event.translationX;
-      translateY.value = startY.value + event.translationY;
-    },
-    onEnd: () => {
-      // Optional: Add snap-back logic here if wanted
-      translateX.value = withSpring(translateX.value, { damping: 10 });
-      translateY.value = withSpring(translateY.value, { damping: 10 });
-    },
-  });
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-      ],
-    };
-  });
-
   return (
-    <PanGestureHandler onGestureEvent={gestureHandler}>
+    <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.container, animatedStyle]}>
         <TouchableOpacity
           style={styles.button}
@@ -58,7 +58,7 @@ const CartBadge = () => {
           <Text style={styles.badge}>{cart.length}</Text>
         </TouchableOpacity>
       </Animated.View>
-    </PanGestureHandler>
+    </GestureDetector>
   );
 };
 
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     right: 20,
-    bottom: 80,
+    bottom: 20,
     zIndex: 9999,
   },
   button: {

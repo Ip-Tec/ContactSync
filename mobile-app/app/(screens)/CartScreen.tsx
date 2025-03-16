@@ -7,10 +7,14 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
+  StyleSheet,
 } from "react-native";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Contact } from "expo-contacts";
+import { CartItem, TradeContactProps } from "@/types/explore-types";
 
 const CartScreen = () => {
   const { cart, removeFromCart } = useCart();
@@ -40,26 +44,23 @@ const CartScreen = () => {
       return;
     }
     try {
-      const { data, error } = await supabase
-        .from("orders") // change to your table name
-        .insert([
-          {
-            cart, // consider using a JSONB column for the cart array if using PostgreSQL
-            account_number: accountDetails.accountNumber,
-            account_name: accountDetails.accountName,
-            bank_name: accountDetails.bankName,
-            account_type: accountDetails.accountType,
-            total_items: totalItems,
-            created_at: new Date(),
-          },
-        ]);
+      const { data, error } = await supabase.from("orders").insert([
+        {
+          cart,
+          account_number: accountDetails.accountNumber,
+          account_name: accountDetails.accountName,
+          bank_name: accountDetails.bankName,
+          account_type: accountDetails.accountType,
+          total_items: totalItems,
+          created_at: new Date(),
+        },
+      ]);
 
       if (error) {
         console.error(error);
         Alert.alert("Error", "Failed to save cart items.");
         return;
       }
-
       Alert.alert("Success", "Cart items saved successfully.");
       handleDeleteAll();
       setShowAccountForm(false);
@@ -73,7 +74,6 @@ const CartScreen = () => {
     cart.forEach((item) => removeFromCart(item.id));
   };
 
-  // Animate the account form fade-in when shown.
   useEffect(() => {
     if (showAccountForm) {
       Animated.timing(fadeAnim, {
@@ -86,74 +86,43 @@ const CartScreen = () => {
     }
   }, [showAccountForm, fadeAnim]);
 
-  const renderCartItem = ({ item }: { item: any }) => (
-    <View
-      style={{
-        backgroundColor: "white",
-        padding: 16,
-        marginBottom: 12,
-        borderRadius: 8,
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-      }}
-    >
-     <TouchableOpacity
-      onPress={() => router.push({
-        pathname: "/ContactDetail",
-        params: {
-          contact: JSON.stringify(item.contact),
-          phoneNumbers: JSON.stringify(item.phoneNumbers),
-          dob: JSON.stringify(item.dob),
-        },
-      })}
-      > 
-     <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-        {item.contact.name}
-      </Text>
-      <Text style={{ marginTop: 4 }}>Phone: {item.phoneNumbers.join(", ")}</Text>
-      {item.dob && (
-        <Text style={{ marginTop: 4 }}>
-          DOB:{" "}
-          {typeof item.dob === "string"
-            ? item.dob
-            : item.dob.toLocaleDateString()}
+  const renderCartItem = ({ item }: { item: CartItem }) => (
+    <View style={styles.cartItem}>
+      <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/ContactDetail",
+            params: {
+              contact: JSON.stringify(item.contact),
+              phoneNumbers: JSON.stringify(item.phoneNumbers),
+              dob: JSON.stringify(item.dob),
+            },
+          })
+        }
+      >
+        <Text style={styles.itemText}>{item.contact.name}</Text>
+        <Text style={styles.itemSubText}>
+          Phone: {item.phoneNumbers.join(", ")}
         </Text>
-      )}
-     </TouchableOpacity>
+        {item.dob && <Text style={styles.itemSubText}>DOB: {item.dob instanceof Date ? item.dob.toISOString() : item.dob}</Text>}
+      </TouchableOpacity>
       <TouchableOpacity
         onPress={() => removeFromCart(item.id)}
-        style={{
-          backgroundColor: "#e74c3c",
-          paddingVertical: 8,
-          borderRadius: 4,
-          marginTop: 8,
-        }}
+        style={styles.removeButton}
       >
-        <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
-          Remove
-        </Text>
+        <MaterialIcons name="delete" size={20} color="white" />
       </TouchableOpacity>
     </View>
   );
 
+
+  
+
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: "#f2f2f2" }}>
-      <Text
-        style={{
-          fontSize: 20,
-          fontWeight: "bold",
-          textAlign: "center",
-          marginBottom: 16,
-        }}
-      >
-        Cart Items ({totalItems})
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.header}>Cart Items ({totalItems})</Text>
       {totalItems === 0 ? (
-        <Text style={{ textAlign: "center", color: "#777" }}>
-          Your cart is empty
-        </Text>
+        <Text style={styles.emptyCartText}>Your cart is empty</Text>
       ) : (
         <FlatList
           data={cart}
@@ -162,50 +131,29 @@ const CartScreen = () => {
           contentContainerStyle={{ paddingBottom: 16 }}
         />
       )}
-
-      {/* Checkout button to show account form */}
       {totalItems > 0 && !showAccountForm && (
         <TouchableOpacity
           onPress={() => setShowAccountForm(true)}
-          style={{
-            backgroundColor: "#3498db",
-            paddingVertical: 12,
-            borderRadius: 8,
-            marginTop: 16,
-          }}
+          style={styles.checkoutButton}
         >
-          <Text
-            style={{
-              color: "white",
-              textAlign: "center",
-              fontWeight: "bold",
-              fontSize: 16,
-            }}
-          >
-            Proceed to Checkout
-          </Text>
+          <MaterialIcons
+            name="shopping-cart-checkout"
+            size={24}
+            color="white"
+          />
+          <Text style={styles.buttonText}>Proceed to Checkout</Text>
         </TouchableOpacity>
       )}
-
-      {/* Account Details Form (animated) */}
       {showAccountForm && (
-        <Animated.View style={{ opacity: fadeAnim, marginTop: 16, backgroundColor: "white", padding: 16, borderRadius: 8, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}>
-          <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 12 }}>
-            Enter Account Details
-          </Text>
+        <Animated.View style={[styles.accountForm, { opacity: fadeAnim }]}>
+          <Text style={styles.formHeader}>Enter Account Details</Text>
           <TextInput
             placeholder="Account Number"
             value={accountDetails.accountNumber}
             onChangeText={(text) =>
               setAccountDetails({ ...accountDetails, accountNumber: text })
             }
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              padding: 8,
-              borderRadius: 4,
-              marginBottom: 12,
-            }}
+            style={styles.input}
           />
           <TextInput
             placeholder="Account Name"
@@ -213,13 +161,7 @@ const CartScreen = () => {
             onChangeText={(text) =>
               setAccountDetails({ ...accountDetails, accountName: text })
             }
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              padding: 8,
-              borderRadius: 4,
-              marginBottom: 12,
-            }}
+            style={styles.input}
           />
           <TextInput
             placeholder="Bank Name"
@@ -227,74 +169,76 @@ const CartScreen = () => {
             onChangeText={(text) =>
               setAccountDetails({ ...accountDetails, bankName: text })
             }
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              padding: 8,
-              borderRadius: 4,
-              marginBottom: 12,
-            }}
+            style={styles.input}
           />
           <TextInput
-            placeholder="Account Type (Savings/Current)"
+            placeholder="Account Type"
             value={accountDetails.accountType}
             onChangeText={(text) =>
               setAccountDetails({ ...accountDetails, accountType: text })
             }
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              padding: 8,
-              borderRadius: 4,
-              marginBottom: 12,
-            }}
+            style={styles.input}
           />
-          <TouchableOpacity
-            onPress={handleSave}
-            style={{
-              backgroundColor: "#2ecc71",
-              paddingVertical: 12,
-              borderRadius: 8,
-            }}
-          >
-            <Text
-              style={{
-                color: "white",
-                textAlign: "center",
-                fontWeight: "bold",
-                fontSize: 16,
-              }}
-            >
-              Save Order
-            </Text>
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+            <Text style={styles.buttonText}>Save Order</Text>
           </TouchableOpacity>
         </Animated.View>
-      )}
-
-      {totalItems > 0 && (
-        <TouchableOpacity
-          onPress={handleDeleteAll}
-          style={{
-            backgroundColor: "#e74c3c",
-            paddingVertical: 12,
-            borderRadius: 8,
-            marginTop: 16,
-          }}
-        >
-          <Text
-            style={{
-              color: "white",
-              textAlign: "center",
-              fontWeight: "bold",
-              fontSize: 16,
-            }}
-          >
-            Clear Cart
-          </Text>
-        </TouchableOpacity>
       )}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16, backgroundColor: "#f2f2f2" },
+  header: {
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  emptyCartText: { textAlign: "center", color: "#777" },
+  cartItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "white",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  itemText: { fontSize: 16, fontWeight: "bold" },
+  itemSubText: { marginTop: 4, color: "#555" },
+  removeButton: { backgroundColor: "#e74c3c", padding: 8, borderRadius: 4 },
+  checkoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#3498db",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  accountForm: {
+    marginTop: 16,
+    backgroundColor: "white",
+    padding: 16,
+    borderRadius: 8,
+  },
+  formHeader: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 12,
+  },
+  saveButton: { backgroundColor: "#2ecc71", padding: 12, borderRadius: 8 },
+});
 
 export default CartScreen;

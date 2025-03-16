@@ -12,13 +12,12 @@ import "react-native-reanimated";
 import "../global.css";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { AuthProvider } from "@/context/AuthContext";
-import { ActivityIndicator, View, Image } from "react-native";
 import { ContactsProvider } from "@/context/ContactsContext";
 import { CartProvider } from "@/context/CartContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "react-native-toast-notifications";
 import CartBadge from "@/components/cart/CartBadge"; // We'll create this component
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -52,20 +51,21 @@ export default function RootLayout() {
   }
 
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <ContactsProvider>
-          <CartProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
+
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ToastProvider>
+        <AuthProvider>
+          <ContactsProvider>
+            <CartProvider>
               <BottomSheetModalProvider>
                 {/* <Toast /> */}
                 <CartBadge />
                 <RootLayoutNav />
               </BottomSheetModalProvider>
-            </GestureHandlerRootView>
-          </CartProvider>
-        </ContactsProvider>
-      </AuthProvider>
-    </ToastProvider>
+            </CartProvider>
+          </ContactsProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </GestureHandlerRootView>
   );
 }

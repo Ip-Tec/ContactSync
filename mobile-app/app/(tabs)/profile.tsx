@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import {
   Switch,
   TouchableOpacity,
@@ -17,10 +17,20 @@ import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { useToast } from "react-native-toast-notifications";
+import AccountSettingsBottomSheet from "@/components/ui/AccountSettingsBottomSheet";
+import BottomSheet from "@gorhom/bottom-sheet";
+import { router } from "expo-router";
 
 const ProfileScreen = () => {
   const toast = useToast();
-  const { signOut, session, resetPassword } = useAuth();
+  const {
+    signOut,
+    session,
+    resetPassword,
+    changeEmail,
+    changePhoneNumber,
+    deleteAccount,
+  } = useAuth();
   const [autoMerge, setAutoMerge] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
   const [isResetPasswordModalVisible, setIsResetPasswordModalVisible] =
@@ -45,11 +55,9 @@ const ProfileScreen = () => {
     }
   };
 
-  useEffect(() => {
-    if (autoMerge) {
-      mergeDuplicates();
-    }
-  }, [autoMerge]);
+  const handleOpenSettingsForm = () => {
+    router.push("/Form");
+  };
 
   const handlePasswordReset = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -73,6 +81,44 @@ const ProfileScreen = () => {
         type: "error",
       });
     }
+  };
+
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const [isAccountSettingsVisible, setIsAccountSettingsVisible] =
+    useState(false);
+
+  const openAccountSettings = useCallback(() => {
+    bottomSheetRef.current?.snapToIndex(1); // Opens the sheet at the 50% snap point
+  }, []);
+
+  const closeAccountSettings = useCallback(() => {
+    bottomSheetRef.current?.snapToIndex(-1); // Hides the sheet
+  }, []);
+
+  // Handlers for account settings actions
+  const handleChangeEmail = () => {
+    console.log("Change Email triggered");
+    // Call your context changeEmail method here...
+    closeAccountSettings();
+  };
+
+  const handleChangePhoneNumber = () => {
+    console.log("Change Phone Number triggered");
+    // Call your context changePhoneNumber method here...
+    closeAccountSettings();
+  };
+
+  const handleChangePassword = () => {
+    console.log("Change Password triggered");
+    // For instance, you might show the reset password modal
+    closeAccountSettings();
+    // setIsResetPasswordModalVisible(true); // if you want to show the modal
+  };
+
+  const handleDeleteAccount = () => {
+    console.log("Delete Account triggered");
+    // Call your context deleteAccount method here...
+    closeAccountSettings();
   };
 
   return (
@@ -106,6 +152,16 @@ const ProfileScreen = () => {
             thumbColor={isDarkTheme ? "#000033" : "#f4f3f4"}
           />
         </View>
+
+        {/* Navigation Button to Form Screen */}
+        <TouchableOpacity
+          onPress={handleOpenSettingsForm}
+          className="bg-blue-500 py-4 rounded-lg items-center mt-4"
+        >
+          <Text className="text-white font-bold text-lg">
+            Open Settings Form
+          </Text>
+        </TouchableOpacity>
 
         {/* Account Information */}
         <ThemedView className="mb-8">
@@ -157,38 +213,64 @@ const ProfileScreen = () => {
           </Text>
         </View>
 
-        {/* Account Settings */}
+        {/* Account Settings Button */}
         <View className="mb-8 bg-gray-200 rounded-lg">
-          <View className="flex-row items-center justify-between border-b border-gray-300 px-4 py-3">
-            <ThemedText className="text-lg text-gray-800">
-              Account Settings
-            </ThemedText>
-          </View>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "accountSettings" },
+              })
+            }
+            className="px-4 py-3 border-b border-gray-300"
+          >
+            <Text className="text-gray-800">Account Settings</Text>
+          </TouchableOpacity>
           <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
-            Update your email, phone number, and other account details.
+            Update your email, phone number, password, or delete your account.
           </Text>
 
           <TouchableOpacity
-            onPress={() => console.log("Change Email")}
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "changeEmail" },
+              })
+            }
             className="px-4 py-3 border-b border-gray-300"
           >
             <Text className="text-gray-800">Change Email</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => console.log("Change Phone Number")}
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "changePhoneNumber" },
+              })
+            }
             className="px-4 py-3 border-b border-gray-300"
           >
             <Text className="text-gray-800">Change Phone Number</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setIsResetPasswordModalVisible(true)}
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "resetPassword" },
+              })
+            }
             className="px-4 py-3 border-b border-gray-300"
           >
             <Text className="text-gray-800">Change Password</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => console.log("Delete Account")}
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "deleteAccount" },
+              })
+            }
             className="px-4 py-3 border-b border-gray-300"
           >
             <Text className="text-red-600">Delete Account</Text>
@@ -261,6 +343,16 @@ const ProfileScreen = () => {
           <Text className="text-white font-bold text-lg">Log Out</Text>
         </TouchableOpacity>
       </ThemedView>
+
+      {isAccountSettingsVisible && (
+        <AccountSettingsBottomSheet
+          ref={bottomSheetRef}
+          onChangeEmail={handleChangeEmail}
+          onChangePhoneNumber={handleChangePhoneNumber}
+          onChangePassword={handleChangePassword}
+          onDeleteAccount={handleDeleteAccount}
+        />
+      )}
 
       {/* Reset Password Modal */}
       <Modal

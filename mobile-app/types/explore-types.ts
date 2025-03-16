@@ -17,12 +17,14 @@ export type FormData = {
 export type CartItem = {
   id: string;
   contact: any;
-  phoneNumbers: string[];
-  dob?: string;
+  emails?: string[];
+  phoneNumbers: (string | undefined)[];
+  dob?: string | Date;
   country?: string;
   countryCode?: string;
   sex?: string;
 };
+
 
 export type TradeContactProps = {
   contact: Contact;
