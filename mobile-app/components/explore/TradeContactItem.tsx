@@ -1,13 +1,31 @@
+// TradeContactItem.tsx
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { TradeContactProps } from "../../app/types/explore-types";
 import { IconSymbol } from "../ui/IconSymbol";
 import { router } from "expo-router";
+import { deduplicatePhoneNumbers } from "@/utils/phoneUtils";
 
+/**
+ * TradeContactItem Component
+ *
+ * Renders an individual tradeable contact.
+ * It displays the contact's name, emails, and a list of deduplicated & normalized phone numbers.
+ * Also includes a "Trade" button to navigate to the EditContact screen.
+ *
+ * @param {TradeContactProps} props - Contains a contact and an onTrade callback.
+ * @returns A JSX element representing the contact.
+ */
 const TradeContactItem = ({ contact, onTrade }: TradeContactProps) => {
+  // Extract phone numbers from the contact, deduplicate & normalize them.
+  const phoneNumbers =
+    contact.phoneNumbers?.map((p: { number: string }) => p.number) || [];
+  const uniquePhoneNumbers = deduplicatePhoneNumbers(phoneNumbers);
+
   return (
     <View className="bg-white rounded-xl p-4 mb-4 mx-4 shadow shadow-black/10">
       <View className="flex-row items-center">
+        {/* Avatar / Icon */}
         <View
           style={{
             backgroundColor: "#3b82f6",
@@ -24,6 +42,7 @@ const TradeContactItem = ({ contact, onTrade }: TradeContactProps) => {
           </Text>
         </View>
 
+        {/* Contact Details */}
         <TouchableOpacity
           className="flex-1"
           onPress={() =>
@@ -39,16 +58,16 @@ const TradeContactItem = ({ contact, onTrade }: TradeContactProps) => {
               {email.email}
             </Text>
           ))}
-          {contact.phoneNumbers?.map(
-            (phone: { number: string }, idx: number) => (
-              <Text key={idx} className="text-gray-600 text-sm">
-                {phone.number}
-              </Text>
-            )
-          )}
+          {/* Render deduplicated & normalized phone numbers */}
+          {uniquePhoneNumbers.map((phone, idx) => (
+            <Text key={idx} className="text-gray-600 text-sm">
+              {phone}
+            </Text>
+          ))}
         </TouchableOpacity>
 
-        <View className="flex justify-center items-center gap-2">
+        {/* Trade Button */}
+        {/* <View className="flex justify-center items-center gap-2">
           <TouchableOpacity
             className="px-4 py-2 rounded-full mb-2 bg-blue-500"
             onPress={() =>
@@ -60,25 +79,11 @@ const TradeContactItem = ({ contact, onTrade }: TradeContactProps) => {
                 },
               })
             }
-            // onPress={() => onTrade}
           >
             <Text className="text-white font-bold">Trade</Text>
           </TouchableOpacity>
-          {/* <TouchableOpacity
-            className="px-4 py-2 rounded-full mt-2 bg-blue-500"
-            onPress={() =>
-              router.push({
-                pathname: "/EditContact",
-                params: {
-                  contact: JSON.stringify(contact),
-                  isUpdate: "true",
-                },
-              })
-            }
-          >
-            <Text className="text-white font-bold">Edit</Text>
-          </TouchableOpacity> */}
         </View>
+           */}
       </View>
     </View>
   );

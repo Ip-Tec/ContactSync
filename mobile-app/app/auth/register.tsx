@@ -14,6 +14,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +26,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!email || !phone || !password || !confirmPassword) {
       setError("Please fill in all fields");
       return;
     }
@@ -36,7 +37,8 @@ export default function RegisterScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await signUp(email, password);
+      // Pass phone number along with email and password.
+      const { error } = await signUp(email, password, phone);
       if (error) {
         setError(error.message);
       } else {
@@ -64,14 +66,28 @@ export default function RegisterScreen() {
       </View>
       <Text className="mb-8 text-4xl font-bold">Create Account</Text>
 
-      <View className="w-full max-w-xl space-y-4">
+      <View className="w-full max-w-xl space-y-4 gap-2">
         <TextInput
           placeholder="Email"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          className={`p-4 rounded-lg text-base ${
+          className={`p-4 rounded-lg text-base mt-1 ${
+            colorScheme === "dark"
+              ? "text-white bg-gray-800"
+              : "text-black bg-gray-200"
+          }`}
+          placeholderTextColor={colorScheme === "dark" ? "#999" : "#666"}
+        />
+
+        <TextInput
+          placeholder="Phone Number"
+          value={phone}
+          onChangeText={setPhone}
+          autoCapitalize="none"
+          keyboardType="phone-pad"
+          className={`p-4 rounded-lg text-base mt-2 ${
             colorScheme === "dark"
               ? "text-white bg-gray-800"
               : "text-black bg-gray-200"
@@ -81,7 +97,7 @@ export default function RegisterScreen() {
 
         {/* Password field with toggle */}
         <View
-          className={`flex-row items-center px-4 py-2 rounded-lg my-4 ${
+          className={`flex-row items-center px-4 py-2 rounded-lg my-2 ${
             colorScheme === "dark" ? "bg-gray-800" : "bg-gray-200"
           }`}
         >

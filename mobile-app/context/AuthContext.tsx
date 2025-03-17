@@ -24,7 +24,8 @@ type AuthContextType = {
   }>;
   signUp: (
     email: string,
-    password: string
+    password: string,
+    phone: string
   ) => Promise<{
     error: AuthError | null;
     data?: { user: User | null; session: Session | null };
@@ -115,8 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+  const signUp = async (email: string, password: string, phone: string) => {
+    const { error } = await supabase.auth.signUp({ email, password, phone });
     return { error };
   };
 
