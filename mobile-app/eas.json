@@ -20,6 +20,14 @@
         "buildType": "apk"
       }
     }
+  },
+  "submit": {
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true
+    }
   }
 }
 
