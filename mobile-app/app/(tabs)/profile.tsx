@@ -13,8 +13,6 @@ import {
 import * as Contacts from "expo-contacts";
 import { useAuth } from "@/context/AuthContext";
 import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
-import { IconSymbol } from "@/components/ui/IconSymbol";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { useToast } from "react-native-toast-notifications";
 import AccountSettingsBottomSheet from "@/components/ui/AccountSettingsBottomSheet";
@@ -155,15 +153,7 @@ const ProfileScreen = () => {
       }
       headerBackgroundColor={{ light: "#D0D0D0", dark: "#353636" }}
     >
-      <ThemedView className="flex-1 mt-0 bg-white px-4">
-        {/* Profile Header */}
-        <ThemedView className="items-center mb-8">
-          <IconSymbol size={80} name="person.circle.fill" color="#0a7ea4" />
-          <ThemedText type="title" className="mt-0 text-sm">
-            {session?.user?.email?.toUpperCase()}
-          </ThemedText>
-        </ThemedView>
-
+      <View className="flex-1 mt-0 bg-white p-4">
         {/* Account Information */}
         <View className="mb-8 bg-gray-200 rounded-lg p-2">
           <View className="flex-col items-center justify-between border-b border-gray-300 px-4 py-3">
@@ -203,70 +193,6 @@ const ProfileScreen = () => {
           <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
             When enabled, duplicate contacts will be merged automatically.
           </Text>
-        </View>
-
-        {/* Account Settings Button */}
-        <View className="mb-8 bg-gray-200 rounded-lg">
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/Form",
-                params: { action: "accountSettings" },
-              })
-            }
-            className="px-4 py-3 border-b border-gray-300"
-          >
-            <Text className="text-gray-800">Account Settings</Text>
-          </TouchableOpacity>
-          <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
-            Update your email, phone number, password, or delete your account.
-          </Text>
-
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/Form",
-                params: { action: "changeEmail" },
-              })
-            }
-            className="px-4 py-3 border-b border-gray-300"
-          >
-            <Text className="text-gray-800">Change Email</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/Form",
-                params: { action: "changePhoneNumber" },
-              })
-            }
-            className="px-4 py-3 border-b border-gray-300"
-          >
-            <Text className="text-gray-800">Change Phone Number</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/Form",
-                params: { action: "resetPassword" },
-              })
-            }
-            className="px-4 py-3 border-b border-gray-300"
-          >
-            <Text className="text-gray-800">Change Password</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/Form",
-                params: { action: "deleteAccount" },
-              })
-            }
-            className="px-4 py-3 border-b border-gray-300"
-          >
-            <Text className="text-red-600">Delete Account</Text>
-          </TouchableOpacity>
         </View>
 
         {/* In-App Help & Support */}
@@ -331,7 +257,7 @@ const ProfileScreen = () => {
                   setAllowContactAccess(false);
                   Alert.alert(
                     "Warning",
-                    "If you do not grant access to contacts, some features of the app may not work properly.",
+                    "If you do not grant access to contacts, you will not be able to add contacts to your account and most features will be disabled.",
                     [
                       {
                         text: "Access Contacts",
@@ -349,6 +275,70 @@ const ProfileScreen = () => {
               }}
             />
           </View>
+        </View>
+
+        {/* Account Settings */}
+        <View className="mb-8 bg-gray-200 rounded-lg">
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "accountSettings" },
+              })
+            }
+            className="px-4 py-3 border-b border-gray-300"
+          >
+            <Text className="text-gray-800">Account Settings</Text>
+          </TouchableOpacity>
+          <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
+            Update your email, phone number, password, or delete your account.
+          </Text>
+
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "changeEmail" },
+              })
+            }
+            className="px-4 py-3 border-b border-gray-300"
+          >
+            <Text className="text-gray-800">Change Email</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "changePhoneNumber" },
+              })
+            }
+            className="px-4 py-3 border-b border-gray-300"
+          >
+            <Text className="text-gray-800">Change Phone Number</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "resetPassword" },
+              })
+            }
+            className="px-4 py-3 border-b border-gray-300"
+          >
+            <Text className="text-gray-800">Change Password</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/Form",
+                params: { action: "deleteAccount" },
+              })
+            }
+            className="px-4 py-3 bg-red-50"
+          >
+            <Text className="text-red-600">Delete Account</Text>
+          </TouchableOpacity>
         </View>
 
         {/* About Section */}
@@ -378,16 +368,14 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Reset Password Button */}
-
         {/* Log Out Button */}
         <TouchableOpacity
           onPress={signOut}
           className="bg-red-500 py-4 rounded-lg items-center mt-4"
         >
-          <Text className="text-white font-bold text-lg">Log Out</Text>
+          <Text className="text-red-50 font-bold text-lg">Log Out</Text>
         </TouchableOpacity>
-      </ThemedView>
+      </View>
 
       {isAccountSettingsVisible && (
         <AccountSettingsBottomSheet
@@ -398,53 +386,6 @@ const ProfileScreen = () => {
           onDeleteAccount={handleDeleteAccount}
         />
       )}
-
-      {/* Reset Password Modal */}
-      <Modal
-        visible={isResetPasswordModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setIsResetPasswordModalVisible(false)}
-      >
-        <View className="flex-1 justify-center items-center bg-gray-800 bg-opacity-50">
-          <View className="bg-white rounded-lg p-6 w-80">
-            <Text className="text-xl font-bold mb-4">Reset Password</Text>
-            <TextInput
-              placeholder="Current Password"
-              secureTextEntry
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              className="border-b border-gray-300 mb-4 p-2"
-            />
-            <TextInput
-              placeholder="New Password"
-              secureTextEntry
-              value={newPassword}
-              onChangeText={setNewPassword}
-              className="border-b border-gray-300 mb-4 p-2"
-            />
-            <TextInput
-              placeholder="Confirm New Password"
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              className="border-b border-gray-300 mb-4 p-2"
-            />
-            <TouchableOpacity
-              onPress={handlePasswordReset}
-              className="bg-green-500 py-3 rounded-lg items-center"
-            >
-              <Text className="text-white font-bold">Reset Password</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setIsResetPasswordModalVisible(false)}
-              className="mt-4"
-            >
-              <Text className="text-gray-500 text-sm text-center">Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </ParallaxScrollView>
   );
 };

@@ -2,18 +2,26 @@ import React from "react";
 import { Animated, TextInput, View, StyleSheet } from "react-native";
 
 interface ExploreHeaderProps {
-  headerHeight: Animated.AnimatedInterpolation<number>;
+  headerHeight?: Animated.AnimatedInterpolation<number> | number;
   searchQuery: string;
   setSearchQuery: (text: string) => void;
 }
 
 const ExploreHeader: React.FC<ExploreHeaderProps> = ({
-  headerHeight,
+  headerHeight = 150,
   searchQuery,
   setSearchQuery,
 }) => {
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      className="flex-1 items-center justify-center w-full h-auto bg-blue-800"
+      style={{
+        height: 120,
+        maxHeight: headerHeight,
+        position: "relative",
+        backgroundColor: "#3b82f6",
+      }}
+    >
       {/* Animated background image fills the header */}
       <Animated.Image
         source={require("@/assets/images/explore.jpeg")}

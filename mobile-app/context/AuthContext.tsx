@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from "react";
 import { Session, User, AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "react-native-toast-notifications";
+import { DBContact } from "@/hooks/useUniqueContacts";
 
 type AuthContextType = {
   session: Session | null;
@@ -13,6 +14,7 @@ type AuthContextType = {
     payment_url: string;
   }[];
   loadingPrice: boolean;
+  dbContacts: DBContact[];
   signIn: (
     email: string,
     password: string
@@ -54,6 +56,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   >([]);
   const [loadingPrice, setLoadingPrice] = useState(true);
 
+  const [dbContacts, setDbContacts] = useState<DBContact[]>([]);
+
   useEffect(() => {
     const fetchSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -92,6 +96,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoadingPrice(false);
   };
 
+  // Fetch contacts from Supabase.
+  const fetchContacts = async () => {
+    const { data, error } = await supabase.from("contacts").select("*");
+    if (error) {
+      toast.show("Error fetching contacts: " + error.message, {
+        type: "error",
+      });
+    } else if (data) {
+      setDbContacts(data);
+    }
+  };
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -184,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         changeEmail,
         changePhoneNumber,
         deleteAccount,
+        dbContacts,
       }}
     >
       {children}
