@@ -1,6 +1,6 @@
 // ContactUserDoNotHave.tsx
 import React from "react";
-import { View, Text, Animated } from "react-native";
+import { View, Text, Animated, FlatList } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { useContacts } from "@/context/ContactsContext";
 import { matchPhoneNumbers } from "@/utils/phoneUtils"; // import your matching function
@@ -103,7 +103,7 @@ const ContactUserDoNotHave = () => {
       <Text className="text-xl font-bold mb-4">
         Contacts User Does Not Have
       </Text>
-      <Animated.FlatList
+      <FlatList
         data={missingContacts}
         keyExtractor={(item) => item.id?.toString() || Date.now().toString()}
         renderItem={({ item }) => (

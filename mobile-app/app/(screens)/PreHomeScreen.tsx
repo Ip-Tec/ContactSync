@@ -11,7 +11,7 @@ const PreHomeScreen: React.FC = () => {
   useEffect(() => {
     if (!loading) {
       // Once contacts are loaded, navigate to the main HomeScreen.
-      router.replace("/(tabs)/home");
+      router.replace("/(tabs)/explore");
     }
   }, [loading]);
 

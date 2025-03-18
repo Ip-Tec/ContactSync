@@ -1,9 +1,10 @@
 // UserContact.tsx
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, FlatList } from "react-native";
 import { Contact } from "@/types/explore-types";
 import { useContacts } from "@/context/ContactsContext";
 import TradeContactItem from "./TradeContactItem";
+import { useSearch } from "@/hooks/useSearch";
 
 /**
  * UserContact Component
@@ -14,12 +15,34 @@ import TradeContactItem from "./TradeContactItem";
  * @param {UserContactProps} props - Contains a contact and a callback when trading is initiated.
  * @returns A JSX element representing the contact.
  */
-const UserContact = () => {
+
+interface UserContactProps {
+  searchQuery: string;
+  setSearchQuery: (text: string) => void;
+}
+
+const UserContact: React.FC<UserContactProps> = ({
+  searchQuery,
+  setSearchQuery,
+}) => {
   const { contacts } = useContacts();
+
+  // State for the search query.
+  // Filter contacts using the search query from the parent.
+  // If no query is provided, all contacts are returned.
+  const filteredData = useMemo(() => {
+    if (!searchQuery) return contacts;
+    return contacts.filter((item) =>
+      item.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [contacts, searchQuery]);
+
   return (
     <FlatList
-      data={contacts}
-      keyExtractor={(item: Contact) => item.id?.toString() || Date.now().toString()}
+      data={filteredData}
+      keyExtractor={(item: Contact) =>
+        item.id?.toString() || Date.now().toString()
+      }
       renderItem={({ item }) => <TradeContactItem contact={item} />}
     />
   );
