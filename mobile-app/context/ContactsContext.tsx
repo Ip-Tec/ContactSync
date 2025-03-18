@@ -42,6 +42,8 @@ interface ContactsContextProps {
   addContact: (contactData: ContactType) => Promise<string | null>;
   deleteContact: (contactId: number) => Promise<boolean>;
   updateContact: (contactId: number, updates: ContactType) => Promise<boolean>;
+  getContactById: (contactId: string) => Promise<ContactType | null>;
+  getContactsByPhoneNumber: (phoneNumber: string) => Promise<ContactType[]>;
 }
 
 const ContactsContext = createContext<ContactsContextProps | undefined>(
@@ -265,6 +267,31 @@ export const ContactsProvider: React.FC<{ children: React.ReactNode }> = ({
     return true;
   };
 
+  async function getContactsByPhoneNumber(userPhone: string) {
+    // Make sure the userPhone is normalized as per your rules.
+    const { data, error } = await supabase
+      .rpc('get_contacts_by_phone', { p_phone: userPhone });
+  
+    if (error) {
+      console.error("Error fetching contacts:", error);
+      return [];
+    }
+    return data;
+  }
+  const getContactById = async (contactId: string) => {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*, phone_numbers(*), emails(*)")
+      .eq("id", contactId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching contact:", error.message);
+      return null;
+    }
+
+    return data;
+  };
   return (
     <ContactsContext.Provider
       value={{
@@ -275,6 +302,8 @@ export const ContactsProvider: React.FC<{ children: React.ReactNode }> = ({
         addContact,
         updateContact,
         deleteContact,
+        getContactsByPhoneNumber,
+        getContactById
       }}
     >
       {children}

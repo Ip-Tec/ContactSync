@@ -22,12 +22,7 @@
     }
   },
   "submit": {
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {
-      "autoIncrement": true
-    }
+    "preview": {},
+    "production": {}
   }
 }
-
