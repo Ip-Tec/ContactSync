@@ -2,7 +2,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useContacts } from "@/context/ContactsContext";
-import { removeCountryCode } from "@/hooks/PhoneNumberUtils";
+import {
+  normalizePhone,
+  matchPhoneNumbers,
+  deduplicatePhoneNumbers,
+} from "@/utils/phoneUtils";
 
 export interface DBContact {
   id: string | number;
@@ -36,47 +40,69 @@ export function useUniqueContacts(limit: number, defaultCountryCode?: string) {
     fetchDBContacts();
   }, []);
 
-  const deviceIdentifiers = useMemo(() => {
-    const identifiers = new Set<string>();
+  // Build an array of normalized device phone numbers.
+  const devicePhoneNumbers = useMemo(() => {
+    const phoneNumbers: string[] = [];
     deviceContacts.forEach((contact) => {
-      // Assume each device contact has arrays "phoneNumbers" and "emails"
+      // Assume each device contact has an array "phoneNumbers"
       if (contact.phoneNumbers) {
         contact.phoneNumbers.forEach((p) => {
           if (p.number) {
-            const normalized = defaultCountryCode
-              ? removeCountryCode(p.number, defaultCountryCode)
-              : p.number;
-            identifiers.add(normalized);
-          }
-        });
-      }
-      if (contact.emails) {
-        contact.emails.forEach((e) => {
-          if (e.email) {
-            identifiers.add(e.email.trim().toLowerCase());
+            // Normalize using the phoneUtils normalizePhone
+            phoneNumbers.push(normalizePhone(p.number));
           }
         });
       }
     });
-    return identifiers;
-  }, [deviceContacts, defaultCountryCode]);
+    // Deduplicate using your utility.
+    return deduplicatePhoneNumbers(phoneNumbers);
+  }, [deviceContacts]);
 
+  // Build a set of device emails (already lowercased).
+  const deviceEmails = useMemo(() => {
+    const emails: string[] = [];
+    deviceContacts.forEach((contact) => {
+      // Assume each device contact has an array "emails"
+      if (contact.emails) {
+        contact.emails.forEach((e) => {
+          if (e.email) {
+            emails.push(e.email.trim().toLowerCase());
+          }
+        });
+      }
+    });
+    return Array.from(new Set(emails));
+  }, [deviceContacts]);
+
+  // Filter DB contacts to those that are "unique" compared to device contacts.
   const uniqueContacts = useMemo(() => {
     return dbContacts.filter((dbContact) => {
+      // Normalize the DB phone number.
       const dbPhone = dbContact.phone_number
-        ? defaultCountryCode
-          ? removeCountryCode(dbContact.phone_number, defaultCountryCode)
-          : dbContact.phone_number
+        ? normalizePhone(dbContact.phone_number)
         : "";
       const dbEmail = dbContact.email
         ? dbContact.email.trim().toLowerCase()
         : "";
-      if (dbPhone && deviceIdentifiers.has(dbPhone)) return false;
-      if (dbEmail && deviceIdentifiers.has(dbEmail)) return false;
+
+      // If a DB phone exists, check if it matches any device phone.
+      if (dbPhone) {
+        const isPhoneDuplicate = devicePhoneNumbers.some((devicePhone) => {
+          return matchPhoneNumbers(dbPhone, devicePhone).match;
+        });
+        if (isPhoneDuplicate) return false;
+      }
+
+      // If a DB email exists, check if it exists in the device emails.
+      if (dbEmail && deviceEmails.includes(dbEmail)) {
+        return false;
+      }
+
       return true;
     });
-  }, [dbContacts, deviceIdentifiers, defaultCountryCode]);
+  }, [dbContacts, devicePhoneNumbers, deviceEmails]);
 
+  // Limit the number of unique contacts returned.
   const limitedUniqueContacts = useMemo(
     () => uniqueContacts.slice(0, limit),
     [uniqueContacts, limit]
@@ -84,3 +110,4 @@ export function useUniqueContacts(limit: number, defaultCountryCode?: string) {
 
   return { uniqueContacts: limitedUniqueContacts, loading, error };
 }
+

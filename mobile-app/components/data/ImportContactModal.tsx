@@ -9,6 +9,7 @@ import {
   Text,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as IntentLauncher from "expo-intent-launcher";
@@ -64,11 +65,10 @@ export default function ImportUniqueContactsModal({
   onSaved,
   defaultCountryCode = "+234",
 }: ImportUniqueContactsModalProps) {
-  const {
-    uniqueContacts: contacts,
-    loading,
-    error,
-  } = useUniqueContacts(limit || 50, defaultCountryCode);
+  const { uniqueContacts: contacts, loading, error } = useUniqueContacts(
+    limit || 50,
+    defaultCountryCode
+  );
   const [saving, setSaving] = useState(false);
 
   // Download all contacts as one vCard file.
@@ -135,86 +135,91 @@ export default function ImportUniqueContactsModal({
     }
   };
 
+  // Define the header to be rendered above the FlatList items.
+  const ListHeader = () => (
+    <>
+      <Text className="text-center mb-4 text-lg font-bold">
+        Import Unique Contacts
+      </Text>
+      {loading ? (
+        <Text className="text-center text-gray-600">Loading contacts...</Text>
+      ) : error ? (
+        <Text className="text-center text-red-500">{error}</Text>
+      ) : contacts.length === 0 ? (
+        <Text className="text-center text-gray-600">
+          No unique contacts available.
+        </Text>
+      ) : (
+        <>
+          <Text className="text-center text-gray-600 mb-4">
+            {contacts.length} unique contacts loaded.
+          </Text>
+          <View className="flex-row gap-2 justify-around items-center m-2">
+            <TouchableOpacity
+              onPress={handleDownloadAll}
+              className="bg-blue-500 rounded-full px-4 py-2"
+              disabled={saving}
+            >
+              <Text className="text-white font-bold text-base">
+                Download All
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSaveToPhoneAll}
+              className="bg-blue-500 rounded-full px-4 py-2"
+              disabled={saving}
+            >
+              <Text className="text-white font-bold text-base">
+                Save All to Contacts
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+    </>
+  );
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
       transparent
+      style={{borderTopEndRadius: 20, borderTopStartRadius: 20}}
       onRequestClose={onClose}
     >
       <View className="flex-1 justify-end bg-black/50">
-        <View className="h-3/4 bg-white rounded-t-2xl p-4">
-          <Text className="text-center mb-4 text-lg font-bold">
-            Import Unique Contacts
-          </Text>
-
-          {loading ? (
-            <Text className="text-center text-gray-600">
-              Loading contacts...
-            </Text>
-          ) : error ? (
-            <Text className="text-center text-red-500">{error}</Text>
-          ) : contacts.length === 0 ? (
-            <Text className="text-center text-gray-600">
-              No unique contacts available.
-            </Text>
-          ) : (
-            <>
-              {/* Summary and collective actions */}
-              <Text className="text-center text-gray-600 mb-4">
-                {contacts.length} unique contacts loaded.
-              </Text>
-              <View className="flex-row gap-2 justify-around items-center m-2">
-                <TouchableOpacity
-                  onPress={handleDownloadAll}
-                  className="bg-blue-500 rounded-full px-4 py-2"
-                  disabled={saving}
-                >
-                  <Text className="text-white font-bold text-base">
-                    Download All
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSaveToPhoneAll}
-                  className="bg-blue-500 rounded-full px-4 py-2"
-                  disabled={saving}
-                >
-                  <Text className="text-white font-bold text-base">
-                    Save All to Contacts
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {/* Optionally, display the list of contacts */}
-              <FlatList
-                data={contacts}
-                keyExtractor={(item) =>
-                  item.id?.toString() || Math.random().toString()
-                }
-                renderItem={({ item }) => (
-                  <View className="bg-gray-100 p-4 rounded-xl shadow-md mb-4">
-                    <Text className="text-lg font-bold">{item.name}</Text>
-                    {item.email && (
-                      <Text className="text-gray-600">{item.email}</Text>
-                    )}
-                    {item.phone_number && (
-                      <Text className="text-gray-600">{item.phone_number}</Text>
-                    )}
-                    {item.country && (
-                      <Text className="text-gray-600">{item.country}</Text>
-                    )}
-                  </View>
+        <SafeAreaView className="bg-white rounded-t-2xl p-4" style={{ flex: 0.75 }}>
+          <FlatList
+            data={contacts}
+            keyExtractor={(item) =>
+              item.id?.toString() || Math.random().toString()
+            }
+            ListHeaderComponent={ListHeader}
+            renderItem={({ item }) => (
+              <View className="bg-gray-100 p-4 rounded-xl shadow-md mb-4">
+                <Text className="text-lg font-bold">{item.name}</Text>
+                {item.email && (
+                  <Text className="text-gray-600">{item.email}</Text>
                 )}
-              />
-            </>
-          )}
-
-          {/* <TouchableOpacity
-            onPress={onClose}
-            className="mt-4 bg-red-500 rounded-full px-6 py-3 items-center"
-          >
-            <Text className="text-white font-bold text-xl">Close</Text>
-          </TouchableOpacity> */}
-        </View>
+                {item.phone_number && (
+                  <Text className="text-gray-600">{item.phone_number}</Text>
+                )}
+                {item.country && (
+                  <Text className="text-gray-600">{item.country}</Text>
+                )}
+              </View>
+            )}
+            ListFooterComponent={
+              <TouchableOpacity
+                onPress={onClose}
+                className="mt-4 bg-red-500 rounded-full px-6 py-3 items-center"
+              >
+                <Text className="text-white font-bold text-xl">Close</Text>
+              </TouchableOpacity>
+            }
+            contentContainerStyle={{ paddingBottom: 20 }}
+          />
+        </SafeAreaView>
       </View>
     </Modal>
   );

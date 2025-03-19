@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import * as Contacts from "expo-contacts";
 import { supabase } from "@/lib/supabase";
-import { Contact as ContactType } from "@/app/types/explore-types";
+import { Contact as ContactType } from "@/types/exploreTypes";
 import { Alert } from "react-native";
 
 export interface Contact extends Contacts.Contact {

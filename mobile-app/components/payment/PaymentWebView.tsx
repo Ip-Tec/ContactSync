@@ -25,6 +25,7 @@ export default function PaymentWebView({
   // This injected JS polls the page every second for the success message.
   // if (document.body.innerText.includes("Payment complete thank you for your payment")) {
   // if (document.body.innerText.includes("This link has been paid")) {
+  //  if (document.body.innerText.includes("Download Receipt")) {
   const injectedJS = `
     (function() {
       const checkSuccess = () => {
