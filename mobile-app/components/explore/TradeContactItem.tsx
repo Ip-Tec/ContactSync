@@ -1,8 +1,8 @@
 // TradeContactItem.tsx
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { TradeContactProps } from "../../app/types/explore-types";
-import { IconSymbol } from "../ui/IconSymbol";
+import { TradeContactProps } from "@/app/types/explore-types";
+import { IconSymbol } from "@/components/ui/IconSymbol";
 import { router } from "expo-router";
 import { deduplicatePhoneNumbers } from "@/utils/phoneUtils";
 

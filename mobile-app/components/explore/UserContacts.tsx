@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, FlatList } from "react-native";
 import { Contact } from "@/types/explore-types";
 import { useContacts } from "@/context/ContactsContext";
-import TradeContactItem from "./TradeContactItem";
+import TradeContactItem from "@/components/explore/TradeContactItem";
 import { useSearch } from "@/hooks/useSearch";
 
 /**
@@ -29,6 +29,7 @@ const UserContact: React.FC<UserContactProps> = ({
 
   // State for the search query.
   // Filter contacts using the search query from the parent.
+
   // If no query is provided, all contacts are returned.
   const filteredData = useMemo(() => {
     if (!searchQuery) return contacts;

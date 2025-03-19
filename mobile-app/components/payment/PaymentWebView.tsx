@@ -28,7 +28,7 @@ export default function PaymentWebView({
   const injectedJS = `
     (function() {
       const checkSuccess = () => {
-        if (document.body.innerText.includes("Download Receipt")) {
+        if (document.body.innerText.includes("Pay for the ")) {
           window.ReactNativeWebView.postMessage("success");
         } else {
           setTimeout(checkSuccess, 1000);

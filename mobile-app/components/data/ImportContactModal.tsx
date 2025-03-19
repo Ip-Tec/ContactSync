@@ -26,12 +26,14 @@ export interface DBContact {
 }
 
 interface ImportUniqueContactsModalProps {
+  limit?: number;
   visible: boolean;
   onClose: () => void;
   onSaved?: () => void;
   defaultCountryCode?: string;
 }
 
+// Generate a vCard for a single contact.
 const generateVCard = (contact: DBContact, countryCode?: string): string => {
   const normalizedPhone = contact.phone_number
     ? removeCountryCode(contact.phone_number, countryCode)
@@ -45,7 +47,18 @@ ${normalizedEmail ? `EMAIL;TYPE=INTERNET:${normalizedEmail}` : ""}
 END:VCARD`;
 };
 
+// Combine multiple vCards into a single file.
+const generateCombinedVCard = (
+  contacts: DBContact[],
+  countryCode?: string
+): string => {
+  return contacts
+    .map((contact) => generateVCard(contact, countryCode))
+    .join("\n");
+};
+
 export default function ImportUniqueContactsModal({
+  limit,
   visible,
   onClose,
   onSaved,
@@ -55,53 +68,52 @@ export default function ImportUniqueContactsModal({
     uniqueContacts: contacts,
     loading,
     error,
-  } = useUniqueContacts(5, defaultCountryCode);
+  } = useUniqueContacts(limit || 50, defaultCountryCode);
   const [saving, setSaving] = useState(false);
 
-  const handleDownload = async (contact: DBContact) => {
+  // Download all contacts as one vCard file.
+  const handleDownloadAll = async () => {
     try {
-      const vCard = generateVCard(contact, defaultCountryCode);
-      const filename = `${contact.name.replace(/[^a-z0-9]/gi, "_")}.vcf`;
+      const combinedVCard = generateCombinedVCard(contacts, defaultCountryCode);
+      const filename = `unique_contacts.vcf`;
 
       if (Platform.OS === "android") {
-        // Android: Save to Downloads folder
+        // Android: Save to Downloads folder.
         const permissions =
           await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
         if (!permissions.granted) {
           Alert.alert("Error", "Storage permission required");
           return;
         }
-
         const uri = await FileSystem.StorageAccessFramework.createFileAsync(
           permissions.directoryUri,
           filename,
           "text/vcard"
         );
-        await FileSystem.writeAsStringAsync(uri, vCard);
+        await FileSystem.writeAsStringAsync(uri, combinedVCard);
         Alert.alert("Success", `Saved to Downloads/${filename}`);
       } else {
-        // iOS: Save to local storage
+        // iOS: Save to local storage.
         const fileUri = FileSystem.documentDirectory + filename;
-        await FileSystem.writeAsStringAsync(fileUri, vCard);
-        Alert.alert("Success", "Contact saved to local storage");
+        await FileSystem.writeAsStringAsync(fileUri, combinedVCard);
+        Alert.alert("Success", "Contacts saved to local storage");
       }
     } catch (err) {
-      Alert.alert("Error", "Failed to save contact file");
+      Alert.alert("Error", "Failed to save contacts file");
       console.error(err);
     }
   };
 
-  const handleSaveToPhone = async (contact: DBContact) => {
+  // Open the system contact importer with the combined vCard file.
+  const handleSaveToPhoneAll = async () => {
     try {
       setSaving(true);
-      const vCard = generateVCard(contact, defaultCountryCode);
-      const filename = `${contact.name.replace(/[^a-z0-9]/gi, "_")}.vcf`;
+      const combinedVCard = generateCombinedVCard(contacts, defaultCountryCode);
+      const filename = `contact_sync.vcf`;
       const fileUri = FileSystem.cacheDirectory + filename;
-
-      await FileSystem.writeAsStringAsync(fileUri, vCard);
+      await FileSystem.writeAsStringAsync(fileUri, combinedVCard);
 
       if (Platform.OS === "android") {
-        // Android: Open contact import screen
         const contentUri = await FileSystem.getContentUriAsync(fileUri);
         await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
           data: contentUri,
@@ -109,14 +121,11 @@ export default function ImportUniqueContactsModal({
           flags: 1,
         });
       } else {
-        // iOS: Open share sheet with contact add option
         await Sharing.shareAsync(fileUri, {
           mimeType: "text/x-vcard",
           dialogTitle: "Add to Contacts",
-          // UIActivityType: "com.apple.MobileAddressBook",
         });
       }
-
       onSaved?.();
     } catch (err) {
       Alert.alert("Error", "Failed to open contact importer");
@@ -150,53 +159,61 @@ export default function ImportUniqueContactsModal({
               No unique contacts available.
             </Text>
           ) : (
-            <FlatList
-              data={contacts}
-              keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-              renderItem={({ item }) => (
-                <View className="bg-gray-100 p-4 rounded-xl shadow-md mb-4">
-                  <Text className="text-lg font-bold">{item.name}</Text>
-                  {item.email && (
-                    <Text className="text-gray-600">{item.email}</Text>
-                  )}
-                  {item.phone_number && (
-                    <Text className="text-gray-600">{item.phone_number}</Text>
-                  )}
-                  {item.country && (
-                    <Text className="text-gray-600">{item.country}</Text>
-                  )}
-                  <View className="flex-row gap-2 justify-around items-center m-2">
-                    <TouchableOpacity
-                      onPress={() => handleDownload(item)}
-                      className="bg-blue-500 rounded-full px-4 py-2 mr-2"
-                      disabled={saving}
-                    >
-                      <Text className="text-white font-bold text-base">
-                        Download
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => handleSaveToPhone(item)}
-                      className="bg-blue-500 rounded-full px-4 py-2 mr-4"
-                      disabled={saving}
-                    >
-                      <Text className="text-white font-bold text-base">
-                        Save to Contacts
-                      </Text>
-                    </TouchableOpacity>
+            <>
+              {/* Summary and collective actions */}
+              <Text className="text-center text-gray-600 mb-4">
+                {contacts.length} unique contacts loaded.
+              </Text>
+              <View className="flex-row gap-2 justify-around items-center m-2">
+                <TouchableOpacity
+                  onPress={handleDownloadAll}
+                  className="bg-blue-500 rounded-full px-4 py-2"
+                  disabled={saving}
+                >
+                  <Text className="text-white font-bold text-base">
+                    Download All
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSaveToPhoneAll}
+                  className="bg-blue-500 rounded-full px-4 py-2"
+                  disabled={saving}
+                >
+                  <Text className="text-white font-bold text-base">
+                    Save All to Contacts
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {/* Optionally, display the list of contacts */}
+              <FlatList
+                data={contacts}
+                keyExtractor={(item) =>
+                  item.id?.toString() || Math.random().toString()
+                }
+                renderItem={({ item }) => (
+                  <View className="bg-gray-100 p-4 rounded-xl shadow-md mb-4">
+                    <Text className="text-lg font-bold">{item.name}</Text>
+                    {item.email && (
+                      <Text className="text-gray-600">{item.email}</Text>
+                    )}
+                    {item.phone_number && (
+                      <Text className="text-gray-600">{item.phone_number}</Text>
+                    )}
+                    {item.country && (
+                      <Text className="text-gray-600">{item.country}</Text>
+                    )}
                   </View>
-                </View>
-              )}
-            />
+                )}
+              />
+            </>
           )}
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={onClose}
             className="mt-4 bg-red-500 rounded-full px-6 py-3 items-center"
           >
             <Text className="text-white font-bold text-xl">Close</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     </Modal>

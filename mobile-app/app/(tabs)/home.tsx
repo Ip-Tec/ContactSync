@@ -264,6 +264,7 @@ const HomeScreen = () => {
           onSaved={() => {
             setImportContactModalVisible(false);
           }}
+          limit={selectedPackage.number_of_contacts}
         />
       )}
     </View>
