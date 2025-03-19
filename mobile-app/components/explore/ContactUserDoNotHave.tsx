@@ -100,8 +100,8 @@ const ContactUserDoNotHave = () => {
 
   return (
     <View className="flex-1 bg-white w-full p-4">
-      <Text className="text-xl font-bold mb-4">
-        Contacts User Does Not Have
+      <Text className="text-xl text-center font-bold mb-4">
+        We don't have any unique contacts for you.
       </Text>
       <FlatList
         data={missingContacts}
