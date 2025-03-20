@@ -7,16 +7,125 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
+import DateTimePicker from "@react-native-community/datetimepicker"; // New date picker import
 import RNPickerSelect from "react-native-picker-select";
-import { ChevronDownIcon, Plus, Trash2 } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons"; // Using Ionicons for icons
 import { useAuth } from "@/context/AuthContext";
 import { Contact, useContacts } from "@/context/ContactsContext";
 import * as Contacts from "expo-contacts";
 import { ContactType as ExpoContactType } from "expo-contacts";
+
+// ---------- ICON COMPONENTS ----------
+
+// Replace lucide-react-native's icons with Ionicons equivalents
+const ChevronDownIcon = ({ size = 20, color = "#4A5568" }) => (
+  <Ionicons name="chevron-down" size={size} color={color} />
+);
+
+const PlusIcon = ({ size = 20, color = "#3B82F6" }) => (
+  <Ionicons name="add" size={size} color={color} />
+);
+
+const TrashIcon = ({ size = 20, color = "#EF4444" }) => (
+  <Ionicons name="trash" size={size} color={color} />
+);
+
+// ---------- CUSTOM DATE PICKER COMPONENT ----------
+// This component replaces react-native-modal-datetime-picker.
+// It uses @react-native-community/datetimepicker and a custom modal for iOS if needed.
+// IMPORTANT: If no date is provided, it does not default to today's date in the form.
+const CustomDatePicker = ({
+  date,
+  onChange,
+}: {
+  date: Date | null;
+  onChange: (date: Date) => void;
+}) => {
+  // Initialize selectedDate as whatever is provided (null or a date)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(date);
+  const [show, setShow] = useState(false);
+
+  // Handler for date change
+  const handleChange = (event: any, newDate?: Date) => {
+    if (newDate) {
+      setSelectedDate(newDate);
+      // For Android, update immediately and close the picker.
+      if (Platform.OS !== "ios") {
+        setShow(false);
+        onChange(newDate);
+      }
+    }
+  };
+
+  return (
+    <View>
+      {/* Touchable area shows either the selected date or a placeholder */}
+      <TouchableOpacity
+        onPress={() => setShow(true)}
+        className="border border-gray-300 rounded-lg p-3 bg-gray-50"
+      >
+        <Text className="text-gray-700 text-base">
+          {selectedDate
+            ? selectedDate.toISOString().split("T")[0]
+            : "Select Date of Birth"}
+        </Text>
+      </TouchableOpacity>
+      {show &&
+        (Platform.OS === "android" ? (
+          // Android: DateTimePicker appears as a dialog.
+          <DateTimePicker
+            value={selectedDate || new Date()} // Supply current date if none selected (only for picker)
+            mode="date"
+            display="default"
+            onChange={handleChange}
+          />
+        ) : (
+          // iOS: Wrap DateTimePicker in a Modal.
+          <Modal transparent animationType="slide">
+            <View className="flex-1 justify-center items-center">
+              <View className="bg-white p-5 rounded-lg">
+                <DateTimePicker
+                  value={selectedDate || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={handleChange}
+                  style={{ width: "100%" }}
+                />
+                {/* Confirm Button for iOS */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setShow(false);
+                    // Only update if a date is selected.
+                    if (selectedDate) onChange(selectedDate);
+                  }}
+                  className="mt-4 bg-blue-500 p-3 rounded-lg"
+                >
+                  <Text className="text-white font-bold text-center">
+                    Confirm
+                  </Text>
+                </TouchableOpacity>
+                {/* Cancel Button for iOS */}
+                <TouchableOpacity
+                  onPress={() => setShow(false)}
+                  className="mt-2 bg-gray-300 p-3 rounded-lg"
+                >
+                  <Text className="text-gray-800 font-bold text-center">
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        ))}
+    </View>
+  );
+};
+
+// ---------- INTERFACES AND ENUMS ----------
 
 interface EmailEntry {
   email: string;
@@ -46,18 +155,21 @@ enum ContactTypes {
   Other = "other",
 }
 
-const EditContact: React.FC = () => {
+// ---------- MAIN COMPONENT ----------
+
+const EditContact = () => {
+  const router = useRouter();
   const { session } = useAuth();
+  const [loading, setLoading] = useState(false);
   const { addContact, updateContact } = useContacts();
   const { contact, isUpdate } = useLocalSearchParams();
-  const router = useRouter();
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [loading, setLoading] = useState(false);
 
+  // Parse the passed contact JSON string if available.
   const parsedContact = useMemo(() => {
     return contact ? JSON.parse(contact as string) : null;
   }, [contact]);
 
+  // Initialize react-hook-form with default values.
   const { control, handleSubmit, reset, watch, setValue } =
     useForm<EditContactFormData>({
       defaultValues: {
@@ -71,6 +183,7 @@ const EditContact: React.FC = () => {
       },
     });
 
+  // Manage dynamic email fields using useFieldArray.
   const {
     fields: emailFields,
     append: appendEmail,
@@ -80,6 +193,7 @@ const EditContact: React.FC = () => {
     name: "emails",
   });
 
+  // Manage dynamic phone number fields using useFieldArray.
   const {
     fields: phoneFields,
     append: appendPhone,
@@ -89,11 +203,9 @@ const EditContact: React.FC = () => {
     name: "phoneNumbers",
   });
 
-  // Watch the phoneNumbers field for changes
+  // Watch for changes in phone numbers to auto-update country and code if a Nigerian number is detected.
   const phoneNumbers = watch("phoneNumbers");
-
   useEffect(() => {
-    // Check if any phone number starts with +234
     const nigeriaNumber = phoneNumbers.find((phone) =>
       phone.number.startsWith("+234")
     );
@@ -103,6 +215,7 @@ const EditContact: React.FC = () => {
     }
   }, [phoneNumbers, setValue]);
 
+  // When editing an existing contact, reset the form with the contact's data.
   useEffect(() => {
     if (parsedContact) {
       reset({
@@ -123,12 +236,13 @@ const EditContact: React.FC = () => {
     }
   }, [parsedContact, reset]);
 
+  // Function to save the contact to the device.
   const onSave = async (formData: EditContactFormData) => {
     setLoading(true);
     try {
-      // Request permissions
+      // Request permissions to access contacts.
       const { status } = await Contacts.requestPermissionsAsync();
-      // For Android specifically, we need to check both permissions
+      // For Android, request both read and write permissions.
       if (Platform.OS === "android") {
         const { status: writeStatus } =
           await Contacts.requestPermissionsAsync();
@@ -149,7 +263,7 @@ const EditContact: React.FC = () => {
         return;
       }
 
-      // Save contact to device
+      // Save the contact using expo-contacts.
       const response = (await Contacts.addContactAsync({
         firstName: formData.name,
         emails: formData.emails
@@ -171,16 +285,19 @@ const EditContact: React.FC = () => {
         name: formData.name,
       })) as unknown as { data: Contact; error?: Error };
 
+      // Handle possible errors.
       if (response.error) {
         throw new Error("Failed to save contact on device");
       } else {
         Alert.alert("Success", "Contact saved to your device");
       }
 
+      // Go back to the previous screen after saving.
       router.back();
     } catch (error) {
       if (error instanceof Error) {
         Alert.alert("Error", error.message || "Failed to save contact");
+        console.log(error.message)
       } else {
         Alert.alert("Error", "Failed to save contact");
       }
@@ -189,6 +306,7 @@ const EditContact: React.FC = () => {
     }
   };
 
+  // If the screen is in update mode but no contact data is provided, display a message.
   if (!contact && isUpdate === "true") {
     return (
       <Text className="p-4 text-center text-lg">
@@ -203,7 +321,7 @@ const EditContact: React.FC = () => {
         {isUpdate === "true" ? "Edit Contact" : "Create Contact"}
       </Text>
 
-      {/* Name */}
+      {/* NAME FIELD */}
       <View className="mb-4">
         <Text className="text-base font-medium text-gray-700 mb-1">Name</Text>
         <Controller
@@ -220,7 +338,7 @@ const EditContact: React.FC = () => {
         />
       </View>
 
-      {/* Emails */}
+      {/* EMAIL FIELDS */}
       <View className="mb-4">
         <View className="flex-row justify-between items-center mb-1">
           <Text className="text-base font-medium text-gray-700">Emails</Text>
@@ -228,7 +346,7 @@ const EditContact: React.FC = () => {
             onPress={() => appendEmail({ email: "" })}
             className="p-1"
           >
-            <Plus size={20} color="#3B82F6" />
+            <PlusIcon size={20} color="#3B82F6" />
           </TouchableOpacity>
         </View>
         {emailFields.map((field, index) => (
@@ -252,14 +370,14 @@ const EditContact: React.FC = () => {
                 onPress={() => removeEmail(index)}
                 className="p-2"
               >
-                <Trash2 size={20} color="#EF4444" />
+                <TrashIcon size={20} color="#EF4444" />
               </TouchableOpacity>
             )}
           </View>
         ))}
       </View>
 
-      {/* Phone Numbers */}
+      {/* PHONE NUMBER FIELDS */}
       <View className="mb-4">
         <View className="flex-row justify-between items-center mb-1">
           <Text className="text-base font-medium text-gray-700">Phones</Text>
@@ -267,7 +385,7 @@ const EditContact: React.FC = () => {
             onPress={() => appendPhone({ number: "" })}
             className="p-1"
           >
-            <Plus size={20} color="#3B82F6" />
+            <PlusIcon size={20} color="#3B82F6" />
           </TouchableOpacity>
         </View>
         {phoneFields.map((field, index) => (
@@ -290,14 +408,14 @@ const EditContact: React.FC = () => {
                 onPress={() => removePhone(index)}
                 className="p-2"
               >
-                <Trash2 size={20} color="#EF4444" />
+                <TrashIcon size={20} color="#EF4444" />
               </TouchableOpacity>
             )}
           </View>
         ))}
       </View>
 
-      {/* Country */}
+      {/* COUNTRY FIELD */}
       <View className="mb-4">
         <Text className="text-base font-medium text-gray-700 mb-1">
           Country
@@ -316,7 +434,7 @@ const EditContact: React.FC = () => {
         />
       </View>
 
-      {/* Country Code */}
+      {/* COUNTRY CODE FIELD */}
       <View className="mb-4">
         <Text className="text-base font-medium text-gray-700 mb-1">
           Country Code
@@ -335,7 +453,7 @@ const EditContact: React.FC = () => {
         />
       </View>
 
-      {/* Date of Birth */}
+      {/* DATE OF BIRTH FIELD */}
       <View className="mb-4">
         <Text className="text-base font-medium text-gray-700 mb-1">
           Date of Birth
@@ -344,35 +462,16 @@ const EditContact: React.FC = () => {
           control={control}
           name="dob"
           render={({ field: { onChange, value } }) => (
-            <>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
-                className="border border-gray-300 rounded-lg p-3 bg-gray-50"
-              >
-                <Text className="text-gray-700 text-base">
-                  {value
-                    ? value.toISOString().split("T")[0]
-                    : "Select Date of Birth"}
-                </Text>
-              </TouchableOpacity>
-
-              <DateTimePickerModal
-                isVisible={showDatePicker}
-                mode="date"
-                onConfirm={(date) => {
-                  setShowDatePicker(false);
-                  onChange(date);
-                }}
-                onCancel={() => setShowDatePicker(false)}
-              />
-            </>
+            <CustomDatePicker date={value} onChange={onChange} />
           )}
         />
       </View>
 
-      {/* Sex Selection */}
+      {/* GENDER/PICKER FIELD */}
       <View className="mb-6">
-        <Text className="text-base font-medium text-gray-700 mb-1">Gender</Text>
+        <Text className="text-base font-medium text-gray-700 mb-1">
+          Gender
+        </Text>
         <Controller
           control={control}
           name="sex"
@@ -393,11 +492,7 @@ const EditContact: React.FC = () => {
                 }}
                 useNativeAndroidPickerStyle={false}
                 Icon={() => (
-                  <ChevronDownIcon
-                    size={20}
-                    color="#4A5568"
-                    className="mb-3 mt-4 mr-6 ml-2 bg-gray-50"
-                  />
+                  <ChevronDownIcon size={20} color="#4A5568" />
                 )}
               />
             </View>
@@ -405,7 +500,7 @@ const EditContact: React.FC = () => {
         />
       </View>
 
-      {/* Save Button */}
+      {/* SAVE BUTTON */}
       <TouchableOpacity
         className="bg-blue-500 p-4 rounded-lg items-center shadow-lg disabled:opacity-50 mb-10"
         onPress={handleSubmit(onSave)}

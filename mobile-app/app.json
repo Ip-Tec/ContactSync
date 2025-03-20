@@ -17,6 +17,7 @@
     },
     "android": {
       "versionCode": 1,
+      "package": "com.contactsync.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#000033"
@@ -26,8 +27,7 @@
         "WRITE_CONTACTS",
         "android.permission.READ_CONTACTS",
         "android.permission.WRITE_CONTACTS"
-      ],
-      "package": "com.contactsync.app"
+      ]
     },
     "web": {
       "bundler": "metro",
