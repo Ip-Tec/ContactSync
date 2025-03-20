@@ -33,7 +33,7 @@ const ads = [
   },
   {
     id: "3",
-    image: require("@/assets/images/react-logo.png"),
+    image: require("@/assets/images/pdes_ads.jpg"),
     link: "https://www.example.com/ad3",
   },
 ];
@@ -128,7 +128,7 @@ const HomeScreen = () => {
       }}
     >
       <Image
-        source={require("@/assets/images/explore.jpeg")}
+        source={require("@/assets/images/pdes_ads.jpg")}
         className="w-full h-full object-cover"
       />
     </Animated.View>
@@ -244,7 +244,7 @@ const HomeScreen = () => {
       >
         {renderParallaxHeader()}
         <View className="mt-5 items-center">{renderPriceCards()}</View>
-        {/* {renderAds()} */}
+        {renderAds()}
       </Animated.ScrollView>
       {selectedPackage && paymentWebViewVisible && (
         <PaymentWebView
