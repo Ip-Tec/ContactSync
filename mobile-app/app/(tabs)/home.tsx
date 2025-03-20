@@ -186,6 +186,7 @@ const HomeScreen = () => {
     );
   };
 
+  // Ads carousel
   const renderAds = () => (
     <View className="mt-5 py-4 bg-gray-100">
       <Text className="text-xl font-bold mb-4 px-4">Featured Offers</Text>
@@ -243,7 +244,7 @@ const HomeScreen = () => {
       >
         {renderParallaxHeader()}
         <View className="mt-5 items-center">{renderPriceCards()}</View>
-        {renderAds()}
+        {/* {renderAds()} */}
       </Animated.ScrollView>
       {selectedPackage && paymentWebViewVisible && (
         <PaymentWebView

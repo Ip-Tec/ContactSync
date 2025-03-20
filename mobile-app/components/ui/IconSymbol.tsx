@@ -39,6 +39,7 @@ const MAPPING = {
   "flag.fill": "flag",
   "pencil.circle.fill": "edit",
   "shopping.cart": "shopping-cart",
+  "delete.fill":"delete"
 } as unknown as Partial<
   Record<
     import("expo-symbols").SymbolViewProps["name"],

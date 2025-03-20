@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
+  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { BottomSheetModal, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useForm, Controller } from "react-hook-form";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { MaterialIcons } from "@expo/vector-icons";
 
 interface EditContactFormData {
   name: string;
@@ -85,6 +87,26 @@ const ContactDetail: React.FC = () => {
     bottomSheetRef.current?.dismiss();
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Contact",
+      "Are you sure you want to delete this contact?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            // Replace this with your deletion logic (e.g., API call or updating local storage)
+            console.log("Contact deleted", contactData);
+            // Navigate back to the contacts list after deletion
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View className="flex-1">
       <ScrollView className="bg-gray-100">
@@ -115,13 +137,21 @@ const ContactDetail: React.FC = () => {
           >
             <IconSymbol name="pencil.circle.fill" size={28} color="#fff" />
           </TouchableOpacity>
+          <TouchableOpacity
+            className="absolute top-24 right-4 bg-red-500 p-2 rounded-full"
+            onPress={handleDelete}
+          >
+            <MaterialIcons name="delete" size={28} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         {/* Details Section */}
         <View className="mt-4 px-4 mb-8">
           {contactData.phoneNumbers?.length > 0 && (
             <View className="bg-white p-4 rounded-lg mb-4 shadow">
-              <Text className="text-lg font-semibold mb-2">Phone Numbers</Text>
+              <Text className="text-lg font-semibold mb-2">
+                Phone Numbers
+              </Text>
               {contactData.phoneNumbers.map(
                 (phone: { number: string }, index: number) => (
                   <View

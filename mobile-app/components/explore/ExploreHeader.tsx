@@ -4,6 +4,7 @@ import { Animated, TextInput, View, StyleSheet } from "react-native";
 interface ExploreHeaderProps {
   headerHeight?: Animated.AnimatedInterpolation<number> | number;
   searchQuery: string;
+  displayInput?: boolean;
   setSearchQuery: (text: string) => void;
 }
 
@@ -11,10 +12,11 @@ const ExploreHeader: React.FC<ExploreHeaderProps> = ({
   headerHeight = 150,
   searchQuery,
   setSearchQuery,
+  displayInput=true
 }) => {
   return (
     <View
-      className="flex-1 items-center justify-center w-full h-auto bg-blue-800"
+      className="items-center justify-center w-full h-auto bg-blue-800"
       style={{
         height: 120,
         maxHeight: headerHeight,
@@ -29,7 +31,7 @@ const ExploreHeader: React.FC<ExploreHeaderProps> = ({
         resizeMode="cover"
       />
       {/* Search bar container positioned at the bottom */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { display: displayInput ? "flex" : "none" }]}>
         <TextInput
           style={styles.searchInput}
           placeholder="Search contacts..."

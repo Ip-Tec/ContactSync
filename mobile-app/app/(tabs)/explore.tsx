@@ -1,3 +1,4 @@
+import { View } from "react-native";
 import React, { useState } from "react";
 import { ThemedView } from "@/components/ThemedView";
 import ExploreHeader from "@/components/explore/ExploreHeader";
@@ -11,16 +12,17 @@ const ExploreScreen: React.FC<ExploreScreenProps> = () => {
 
   return (
     <ThemedView style={{ flex: 1 }}>
-        <ExploreHeader
-          headerHeight={headerHeight}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-        />
-
+      <ExploreHeader
+        headerHeight={headerHeight}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
+      <View>
         <ContactsRoute
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
         />
+      </View>
     </ThemedView>
   );
 };

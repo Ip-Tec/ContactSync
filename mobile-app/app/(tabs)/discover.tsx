@@ -17,6 +17,7 @@ const DiscoverScreen: React.FC<DiscoverScreenProps> = () => {
         headerHeight={headerHeight}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        displayInput={false}
       />
       <ContactUserDoNotHave />
     </View>
