@@ -398,7 +398,7 @@ export default function ImportUniqueContactsModal({
                     <Text className="text-white font-bold text-lg">
                       {processing
                         ? "Generating..."
-                        : `Download ${finalUniqueContacts.length} Contacts`}
+                        : `Save ${finalUniqueContacts.length} Contacts`}
                     </Text>
                   </TouchableOpacity>
                 )}

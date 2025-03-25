@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import {
   Animated,
-  StyleSheet,
   Image,
   TouchableOpacity,
   FlatList,
@@ -10,33 +9,15 @@ import {
   Linking,
   Text,
 } from "react-native";
+import { adsProp } from "@/types/explore-types";
 import { useAuth } from "@/context/AuthContext";
 import { IconSymbol } from "@/components/ui/IconSymbol";
-import { SafeAreaView } from "react-native-safe-area-context";
 import PaymentWebView from "@/components/payment/PaymentWebView";
 import ImportContactModal from "@/components/data/ImportContactModal";
 
 const HEADER_MAX_HEIGHT = 220;
 const HEADER_MIN_HEIGHT = 70;
 const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
-
-const ads = [
-  {
-    id: "1",
-    image: require("@/assets/images/logo.png"),
-    link: "https://www.example.com/ad1",
-  },
-  {
-    id: "2",
-    image: require("@/assets/images/explore.jpeg"),
-    link: "https://www.example.com/ad2",
-  },
-  {
-    id: "3",
-    image: require("@/assets/images/pdes_ads.jpg"),
-    link: "https://www.example.com/ad3",
-  },
-];
 
 const getIconForPackage = (name: string): string => {
   const lower = name.toLowerCase();
@@ -51,7 +32,7 @@ const getIconForPackage = (name: string): string => {
 };
 
 const HomeScreen = () => {
-  const { priceData, loadingPrice } = useAuth();
+  const { priceData, loadingPrice, ads } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState<{
     price: number;
     number_of_contacts: number;
@@ -61,20 +42,24 @@ const HomeScreen = () => {
 
   // State flags for modals/bottom sheets.
   const [paymentWebViewVisible, setPaymentWebViewVisible] = useState(false);
-  const [importContactModalVisible, setImportContactModalVisible] =
-    useState(false);
+  const [importContactModalVisible, setImportContactModalVisible] = useState(false);
 
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<adsProp>>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
-  // Fetch pricing data from Supabase.
+  const adsList = ads || [];
 
+  // Separate ads based on pricing_type.
+  const homeAd = adsList.find((ad) => ad.pricing_type === "home");
+  const carouselAds = adsList.filter((ad) => ad.pricing_type === "carousel");
+
+  // Auto-scrolling logic for carousel ads.
   useEffect(() => {
-    if (autoScrollEnabled && ads.length > 1) {
+    if (autoScrollEnabled && carouselAds.length > 0) {
       scrollInterval.current = setInterval(() => {
         setCurrentAdIndex((prev) => {
-          const nextIndex = prev + 1 >= ads.length ? 0 : prev + 1;
+          const nextIndex = prev + 1 >= carouselAds.length ? 0 : prev + 1;
           flatListRef.current?.scrollToIndex({
             index: nextIndex,
             animated: true,
@@ -87,7 +72,7 @@ const HomeScreen = () => {
         if (scrollInterval.current) clearInterval(scrollInterval.current);
       };
     }
-  }, [autoScrollEnabled, ads.length]);
+  }, [autoScrollEnabled, carouselAds.length]);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -119,37 +104,116 @@ const HomeScreen = () => {
     extrapolate: "clamp",
   });
 
+  // Header uses a "home" ad if available.
   const renderParallaxHeader = () => (
     <Animated.View
-      className="bg-gray-300 overflow-hidden"
       style={{
         height: headerHeight,
         transform: [{ translateY: headerTranslate }],
       }}
+      className="bg-gray-300 overflow-hidden"
     >
-      <Image
-        source={require("@/assets/images/pdes_ads.jpg")}
-        className="w-full h-full object-cover"
-      />
+      <TouchableOpacity
+        onPress={() => {
+          if (homeAd && homeAd.redirect_url) {
+            Linking.openURL(homeAd.redirect_url);
+          } else {
+            console.log("No redirect URL available");
+          }
+        }}
+      >
+        <Image
+          source={
+            homeAd
+              ? { uri: homeAd.media_url }
+              : require("@/assets/images/pdes_ads.jpg")
+          }
+          style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+          className="w-full h-full object-cover"
+        />
+      </TouchableOpacity>
     </Animated.View>
   );
 
-  const renderAdItem = ({ item }: { item: (typeof ads)[0] }) => (
+  // Carousel item rendering for "carousel" ads.
+  const renderAdItem = ({ item }: { item: adsProp }) => (
     <TouchableOpacity
-      onPress={() => Linking.openURL(item.link)}
-      className="mx-2 h-80 w-80" // Fixed height
+      onPress={() => {
+        // Open redirect_url if available; otherwise open media_url.
+        const urlToOpen = item.redirect_url ? item.redirect_url : item.media_url;
+        Linking.openURL(urlToOpen);
+      }}
+      className="mx-2 h-80 w-80"
     >
       <View className="rounded-xl overflow-hidden shadow-md bg-white h-full aspect-square">
         <Image
-          source={item.image}
+          source={{ uri: item.media_url }}
           className="w-full h-full"
-          style={{
-            resizeMode: "cover",
-          }}
+          style={{ resizeMode: "cover" }}
         />
       </View>
     </TouchableOpacity>
   );
+
+  // Render Carousel ads or a default image if none available.
+  const renderAds = () => {
+    if (carouselAds.length === 0) {
+      return (
+        <View className="mt-5 py-4 bg-gray-100 justify-center items-center">
+          <Text className="text-xl font-bold mb-4">Featured Offers</Text>
+          <Image
+            source={require("@/assets/images/pdes_ads.jpg")}
+            style={{ width: 350, height: 256, resizeMode: "cover" }}
+            className="rounded-xl"
+          />
+        </View>
+      );
+    }
+    return (
+      <View className="mt-5 py-4 bg-gray-100">
+        <Text className="text-xl font-bold mb-4 px-4">Featured Offers</Text>
+        <FlatList
+          ref={flatListRef}
+          data={carouselAds}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => String(item.ad_id)}
+          renderItem={renderAdItem}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: 8,
+          }}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          snapToInterval={256 + 16} // width + margin (256 + 16)
+          onScrollBeginDrag={() => setAutoScrollEnabled(false)} // Pause on user interaction
+          onScrollEndDrag={() => setAutoScrollEnabled(true)} // Resume after interaction
+          onMomentumScrollEnd={(event) => {
+            const contentOffset = event.nativeEvent.contentOffset;
+            const viewSize = event.nativeEvent.layoutMeasurement;
+            const pageNum = Math.floor(contentOffset.x / viewSize.width);
+            setCurrentAdIndex(pageNum);
+          }}
+          getItemLayout={(data, index) => ({
+            length: 256 + 16,
+            offset: (256 + 16) * index,
+            index,
+          })}
+        />
+        {/* Indicator dots */}
+        <View className="flex-row justify-center mt-2">
+          {carouselAds.map((_, index) => (
+            <View
+              key={index}
+              className={`w-2 h-2 rounded-full mx-1 ${
+                index === currentAdIndex ? "bg-blue-500" : "bg-gray-300"
+              }`}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  };
 
   const renderPriceCards = () => {
     if (loadingPrice) {
@@ -186,52 +250,6 @@ const HomeScreen = () => {
     );
   };
 
-  // Ads carousel
-  const renderAds = () => (
-    <View className="mt-5 py-4 bg-gray-100">
-      <Text className="text-xl font-bold mb-4 px-4">Featured Offers</Text>
-      <FlatList
-        ref={flatListRef}
-        data={ads}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
-        renderItem={renderAdItem}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingBottom: 8,
-        }}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        snapToInterval={256 + 16} // width + margin (64*4 + 16)
-        onScrollBeginDrag={() => setAutoScrollEnabled(false)} // Pause on user interaction
-        onScrollEndDrag={() => setAutoScrollEnabled(true)} // Resume after interaction
-        onMomentumScrollEnd={(event) => {
-          const contentOffset = event.nativeEvent.contentOffset;
-          const viewSize = event.nativeEvent.layoutMeasurement;
-          const pageNum = Math.floor(contentOffset.x / viewSize.width);
-          setCurrentAdIndex(pageNum);
-        }}
-        getItemLayout={(data, index) => ({
-          length: 256 + 16, // width + margin
-          offset: (256 + 16) * index,
-          index,
-        })}
-      />
-      {/* Add indicator dots */}
-      <View className="flex-row justify-center mt-2">
-        {ads.map((_, index) => (
-          <View
-            key={index}
-            className={`w-2 h-2 rounded-full mx-1 ${
-              index === currentAdIndex ? "bg-blue-500" : "bg-gray-300"
-            }`}
-          />
-        ))}
-      </View>
-    </View>
-  );
-
   return (
     <View className="flex-1 bg-gray-100">
       <Animated.ScrollView
@@ -251,7 +269,6 @@ const HomeScreen = () => {
           visible={paymentWebViewVisible}
           url={selectedPackage.payment_url}
           onPaymentSuccess={() => {
-            // When payment is successful, close the WebView and open the ImportContactModal.
             setPaymentWebViewVisible(false);
             setImportContactModalVisible(true);
           }}

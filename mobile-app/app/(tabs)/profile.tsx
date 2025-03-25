@@ -43,6 +43,12 @@ const ProfileScreen = () => {
 
   const [allowContactAccess, setAllowContactAccess] = useState<boolean>(false);
 
+  const { ads } = useAuth();
+  const adsList = ads || [];
+
+  // Separate ads based on pricing_type.
+  const profileAd = adsList.find((ad) => ad.pricing_type === "discover");
+
   const handlePermissionToggle = async (value: boolean) => {
     const result = await toggleContactsPermission();
     setAllowContactAccess(result);
@@ -147,7 +153,7 @@ const ProfileScreen = () => {
     <ParallaxScrollView
       headerImage={
         <Image
-          source={require("@/assets/images/icon.png")}
+          source={profileAd ? profileAd.media_url : require("@/assets/images/icon.png")}
           className="h-full w-full"
         />
       }
@@ -349,16 +355,11 @@ const ProfileScreen = () => {
           <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
            you can add your business to our app.
           </Text>
-          <View className="px-4 py-3 border-y border-gray-300">
-            <Text className="text-gray-800">
-              App Version: {Constants.nativeAppVersion}
-            </Text>
-          </View>
           <TouchableOpacity
-            onPress={() => console.log("Terms & Conditions")}
-            className="px-4 py-3 border-b border-gray-300"
+            onPress={() => router.push("/AdSubmissionScreen")}
+            className="px-4 py-3 bg-blue-500"
           >
-            <Text className="text-gray-800">Add Business</Text>
+            <Text className="text-gray-200 text-center w-full">Add Business</Text>
           </TouchableOpacity>
         </View>
 

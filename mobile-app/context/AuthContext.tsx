@@ -3,8 +3,10 @@ import { Session, User, AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "react-native-toast-notifications";
 import { DBContact } from "@/hooks/useUniqueContacts";
+import { adsProp } from "@/types/explore-types";
 
 type AuthContextType = {
+  ads: adsProp[];
   session: Session | null;
   loading: boolean;
   priceData: {
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const toast = useToast();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ads, setAds] = useState<any>();
   const [priceData, setPriceData] = useState<
     {
       name: string;
@@ -68,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     fetchSession();
-
+    getAds();
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -185,9 +188,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   };
 
+  const getAds = async () => {
+    // Fetch active ads
+    const { data: ads, error } = await supabase
+      .from("ads")
+      .select("*")
+      .eq("status", "active");
+  
+    if (error) {
+      toast.show("Error fetching ads: " + error.message, {
+        type: "error",
+        duration: 5000,
+      });
+      return;
+    }
+    if (!ads) return;
+  
+    // Get current time
+    const now = new Date();
+    // Identify ads that have expired
+    const expiredAds = ads.filter((ad) => new Date(ad.end_date) < now);
+  
+    if (expiredAds.length > 0) {
+      // Create a list of ad IDs that need updating
+      const expiredIds = expiredAds.map((ad) => ad.ad_id);
+      // Update those ads in the DB
+      const { error: updateError } = await supabase
+        .from("ads")
+        .update({ status: "expired" })
+        .in("ad_id", expiredIds);
+  
+      if (updateError) {
+        toast.show("Error updating expired ads: " + updateError.message, {
+          type: "error",
+          duration: 5000,
+        });
+      }
+  
+      // Optionally update the local ads data:
+      ads.forEach((ad) => {
+        if (expiredIds.includes(ad.ad_id)) {
+          ad.status = "expired";
+        }
+      });
+    }
+  
+    // Optionally, filter out expired ads from being displayed
+    const activeAds = ads.filter((ad) => ad.status === "active");
+  
+    setAds(activeAds);
+    return activeAds;
+  };
+  
+
   return (
     <AuthContext.Provider
       value={{
+        ads,
         session,
         loading,
         priceData,
