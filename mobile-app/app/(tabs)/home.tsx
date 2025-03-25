@@ -10,11 +10,11 @@ import {
   Linking,
   Text,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { IconSymbol } from "@/components/ui/IconSymbol";
-import PaymentWebView from "@/components/payment/PaymentWebView"; // Payment webview
-import ImportContactModal from "@/components/data/ImportContactModal"; // Import contact modal (wrapped in a BottomSheet)
 import { useAuth } from "@/context/AuthContext";
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { SafeAreaView } from "react-native-safe-area-context";
+import PaymentWebView from "@/components/payment/PaymentWebView";
+import ImportContactModal from "@/components/data/ImportContactModal";
 
 const HEADER_MAX_HEIGHT = 220;
 const HEADER_MIN_HEIGHT = 70;

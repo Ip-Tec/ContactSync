@@ -341,6 +341,27 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Advertised with us */}
+        <View className="mb-8 bg-gray-200 rounded-lg">
+          <View className="flex-row items-center justify-between border-b border-gray-300 px-4 py-3">
+            <ThemedText className="text-lg text-gray-800">Advertised with us</ThemedText>
+          </View>
+          <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
+           you can add your business to our app.
+          </Text>
+          <View className="px-4 py-3 border-y border-gray-300">
+            <Text className="text-gray-800">
+              App Version: {Constants.nativeAppVersion}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => console.log("Terms & Conditions")}
+            className="px-4 py-3 border-b border-gray-300"
+          >
+            <Text className="text-gray-800">Add Business</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* About Section */}
         <View className="mb-8 bg-gray-200 rounded-lg">
           <View className="flex-row items-center justify-between border-b border-gray-300 px-4 py-3">

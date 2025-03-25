@@ -1,4 +1,4 @@
-// useUniqueContacts.ts
+// Updated useUniqueContacts.ts
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useContacts } from "@/context/ContactsContext";
@@ -7,6 +7,7 @@ import {
   matchPhoneNumbers,
   deduplicatePhoneNumbers,
 } from "@/utils/phoneUtils";
+import * as FileSystem from 'expo-file-system';
 
 export interface DBContact {
   id: string | number;
@@ -16,98 +17,162 @@ export interface DBContact {
   phone_number?: string | null;
   country_code?: string | null;
   date_of_birth?: string | null;
-  // other columns if needed
+}
+
+interface ContactFile {
+  id: string;
+  created_at: string;
+  name: string;
 }
 
 export function useUniqueContacts(limit: number, defaultCountryCode?: string) {
-  const [dbContacts, setDbContacts] = useState<DBContact[]>([]);
+  const [contactFiles, setContactFiles] = useState<ContactFile[]>([]);
+  const [uniqueContacts, setUniqueContacts] = useState<DBContact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | undefined>();
   const { contacts: deviceContacts } = useContacts();
 
+  // Get normalized device identifiers
+  const deviceIdentifiers = useMemo(() => {
+    const identifiers = new Set<string>();
+    deviceContacts.forEach(contact => {
+      contact.phoneNumbers?.forEach(p => {
+        if (p.number) identifiers.add(normalizePhone(p.number));
+      });
+      contact.emails?.forEach(e => {
+        if (e.email) identifiers.add(e.email.toLowerCase().trim());
+      });
+    });
+    return identifiers;
+  }, [deviceContacts]);
+
+  // Fetch contact files from storage
   useEffect(() => {
-    async function fetchDBContacts() {
-      setLoading(true);
-      const { data, error } = await supabase.from("contacts").select("*");
-      if (error) {
-        console.error("Error fetching DB contacts:", error.message);
-        setError(error.message);
-      } else if (data) {
-        setDbContacts(data as DBContact[]);
+    const fetchFiles = async () => {
+      try {
+        const { data, error } = await supabase.storage
+          .from('contact_files')
+          .list('', {
+            sortBy: { column: 'created_at', order: 'desc' },
+          });
+
+        if (error) throw error;
+        setContactFiles(data as ContactFile[]);
+      } catch (err) {
+        setError('Failed to fetch contact files');
       }
-      setLoading(false);
-    }
-    fetchDBContacts();
+    };
+
+    fetchFiles();
   }, []);
 
-  // Build an array of normalized device phone numbers.
-  const devicePhoneNumbers = useMemo(() => {
-    const phoneNumbers: string[] = [];
-    deviceContacts.forEach((contact) => {
-      // Assume each device contact has an array "phoneNumbers"
-      if (contact.phoneNumbers) {
-        contact.phoneNumbers.forEach((p) => {
-          if (p.number) {
-            // Normalize using the phoneUtils normalizePhone
-            phoneNumbers.push(normalizePhone(p.number));
-          }
-        });
+  // Process files to find unique contacts
+  useEffect(() => {
+    const processFiles = async () => {
+      if (!contactFiles.length) return;
+
+      try {
+        let collectedContacts: DBContact[] = [];
+        
+        for (const file of contactFiles) {
+          if (collectedContacts.length >= limit) break;
+
+          // Download file
+          const { data, error } = await supabase.storage
+            .from('contact_files')
+            .download(file.name);
+
+          if (error || !data) continue;
+
+          // Read file content
+          const content = await data.text();
+          const contacts = parseFileContent(content, file.name);
+
+          // Filter unique contacts
+          const unique = contacts.filter(contact => {
+            const phone = contact.phone_number ? normalizePhone(contact.phone_number) : '';
+            const email = contact.email?.toLowerCase().trim() || '';
+            
+            return !(
+              (phone && deviceIdentifiers.has(phone)) ||
+              (email && deviceIdentifiers.has(email))
+            );
+          });
+
+          collectedContacts = [...collectedContacts, ...unique];
+        }
+
+        // Trim to limit and set state
+        setUniqueContacts(collectedContacts.slice(0, limit));
+        setLoading(false);
+
+      } catch (err) {
+        setError('Failed to process contact files');
+        setLoading(false);
       }
+    };
+
+    if (contactFiles.length) processFiles();
+  }, [contactFiles, deviceIdentifiers, limit]);
+
+  // File content parser
+  const parseFileContent = (content: string, fileName: string): DBContact[] => {
+    try {
+      if (fileName.endsWith('.csv')) {
+        return parseCSV(content);
+      } else if (fileName.endsWith('.vcf')) {
+        return parseVCF(content);
+      }
+      return [];
+    } catch (err) {
+      console.error('Error parsing file:', err);
+      return [];
+    }
+  };
+
+  // CSV parser
+  const parseCSV = (content: string): DBContact[] => {
+    const lines = content.split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    
+    return lines.slice(1).map(line => {
+      const values = line.split(',');
+      const contact: DBContact = { id: Math.random(), name: '' };
+      
+      headers.forEach((header, index) => {
+        const value = values[index]?.trim();
+        switch(header.toLowerCase()) {
+          case 'name': contact.name = value; break;
+          case 'email': contact.email = value; break;
+          case 'phone': contact.phone_number = value; break;
+          case 'country': contact.country = value; break;
+        }
+      });
+      
+      return contact;
     });
-    // Deduplicate using your utility.
-    return deduplicatePhoneNumbers(phoneNumbers);
-  }, [deviceContacts]);
+  };
 
-  // Build a set of device emails (already lowercased).
-  const deviceEmails = useMemo(() => {
-    const emails: string[] = [];
-    deviceContacts.forEach((contact) => {
-      // Assume each device contact has an array "emails"
-      if (contact.emails) {
-        contact.emails.forEach((e) => {
-          if (e.email) {
-            emails.push(e.email.trim().toLowerCase());
-          }
-        });
-      }
+  // VCF parser
+  const parseVCF = (content: string): DBContact[] => {
+    const cards = content.split('BEGIN:VCARD').slice(1);
+    return cards.map(card => {
+      const contact: DBContact = { id: Math.random(), name: '' };
+      const lines = card.split('\n');
+      
+      lines.forEach(line => {
+        if (line.startsWith('FN:')) {
+          contact.name = line.split(':')[1]?.trim();
+        } else if (line.startsWith('TEL;')) {
+          contact.phone_number = line.split(':')[1]?.trim();
+        } else if (line.startsWith('EMAIL;')) {
+          contact.email = line.split(':')[1]?.trim();
+        }
+      });
+      
+      return contact;
     });
-    return Array.from(new Set(emails));
-  }, [deviceContacts]);
+  };
 
-  // Filter DB contacts to those that are "unique" compared to device contacts.
-  const uniqueContacts = useMemo(() => {
-    return dbContacts.filter((dbContact) => {
-      // Normalize the DB phone number.
-      const dbPhone = dbContact.phone_number
-        ? normalizePhone(dbContact.phone_number)
-        : "";
-      const dbEmail = dbContact.email
-        ? dbContact.email.trim().toLowerCase()
-        : "";
-
-      // If a DB phone exists, check if it matches any device phone.
-      if (dbPhone) {
-        const isPhoneDuplicate = devicePhoneNumbers.some((devicePhone) => {
-          return matchPhoneNumbers(dbPhone, devicePhone).match;
-        });
-        if (isPhoneDuplicate) return false;
-      }
-
-      // If a DB email exists, check if it exists in the device emails.
-      if (dbEmail && deviceEmails.includes(dbEmail)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [dbContacts, devicePhoneNumbers, deviceEmails]);
-
-  // Limit the number of unique contacts returned.
-  const limitedUniqueContacts = useMemo(
-    () => uniqueContacts.slice(0, limit),
-    [uniqueContacts, limit]
-  );
-
-  return { uniqueContacts: limitedUniqueContacts, loading, error };
+  return { uniqueContacts, loading, error };
 }
-

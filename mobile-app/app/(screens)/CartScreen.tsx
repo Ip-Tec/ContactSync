@@ -9,11 +9,11 @@ import {
   Animated,
   StyleSheet,
 } from "react-native";
-import { useCart } from "@/context/CartContext";
-import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Contact } from "expo-contacts";
+import { supabase } from "@/lib/supabase";
+import { useCart } from "@/context/CartContext";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { CartItem, TradeContactProps } from "@/types/explore-types";
 
 const CartScreen = () => {
