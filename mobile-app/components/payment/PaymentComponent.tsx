@@ -6,8 +6,7 @@ import {
   TouchableOpacity,
   Text,
   ActivityIndicator,
-  StyleSheet,
-  ScrollView,
+  StyleSheet
 } from "react-native";
 import { Toast } from "react-native-toast-notifications";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
@@ -23,7 +22,7 @@ interface PaymentComponentProps {
 interface PaymentData {
   transactionId?: string;
   amount?: number;
-  status?: 'success' | 'failed' | 'pending';
+  status?: "success" | "failed" | "pending";
   timestamp?: string;
   // Add other relevant payment fields
 }
@@ -113,7 +112,7 @@ export default function PaymentComponent({
       successHandled.current = true;
       // Create a payment data object with relevant information
       const paymentData: PaymentData = {
-        status: 'success',
+        status: "success",
         timestamp: new Date().toISOString(),
         amount: amount,
       };
@@ -131,17 +130,22 @@ export default function PaymentComponent({
   }
 
   return (
-    <ScrollView>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           {paymentUrl && (
             <View style={styles.amountContainer}>
               <Text style={styles.amountText}>Amount: {amount.toFixed(2)}</Text>
             </View>
-            
+
             // Render the WebView if paymentUrl exists
           )}
-          
+
           {paymentUrl ? (
             <WebView
               ref={webViewRef}
@@ -160,7 +164,9 @@ export default function PaymentComponent({
               renderLoading={() => (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#3b82f6" />
-                  <Text style={styles.loadingText}>Loading payment gateway...</Text>
+                  <Text style={styles.loadingText}>
+                    Loading payment gateway...
+                  </Text>
                 </View>
               )}
               style={styles.webview}
@@ -170,9 +176,9 @@ export default function PaymentComponent({
               <Text>Unable to load payment gateway</Text>
             </View>
           )}
-          
-          <TouchableOpacity 
-            style={styles.closeButton} 
+
+          <TouchableOpacity
+            style={styles.closeButton}
             onPress={() => {
               if (webViewRef.current) {
                 webViewRef.current.stopLoading();
@@ -184,21 +190,21 @@ export default function PaymentComponent({
           </TouchableOpacity>
         </View>
       </View>
-    </ScrollView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   fullScreenCentered: {
     flex: 1,
-    width:"100%",
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fff",
   },
   modalOverlay: {
     flex: 1,
-    width:"100%",
+    width: "100%",
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",

@@ -28,17 +28,35 @@ export default function PaymentWebView({
   //  if (document.body.innerText.includes("Download Receipt")) {
   const injectedJS = `
     (function() {
-      const checkSuccess = () => {
-        if (document.body.innerText.includes("Pay for the ")) {
-          window.ReactNativeWebView.postMessage("success");
-        } else {
-          setTimeout(checkSuccess, 1000);
-        }
-      };
-      checkSuccess();
-    })();
-    true;
-  `;
+     const successPatterns = [
+      "Payment successful",
+      "Thank you for your payment",
+      "Transaction successful",
+      "Transaction completed",
+      "Download Receipt",
+      "Peter Otakhor"
+    ];
+
+     let checkTimeout;
+
+    const checkSuccess = () => {
+      const pageText = document.body.innerText;
+      if (successPatterns.some(pattern => pageText.includes(pattern))) {
+        window.ReactNativeWebView.postMessage("success");
+        window.clearTimeout(checkTimeout);
+        return;
+      }
+      checkTimeout = window.setTimeout(checkSuccess, 1000);
+    };
+    
+    checkSuccess();
+    
+    // Cleanup function
+    window.onbeforeunload = () => {
+      window.clearTimeout(checkTimeout);
+    };
+  })();
+  true;`;
 
   return (
     <Modal
