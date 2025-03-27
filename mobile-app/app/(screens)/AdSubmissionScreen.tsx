@@ -42,7 +42,8 @@ interface PaymentData {
 const getPricingType = (positionId: number): string => {
   if (positionId === 1) return "home";
   else if (positionId >= 2 && positionId <= 4) return "carousel";
-  else if (positionId === 5) return "contact"; // changed from "contacts" to "contact"
+  else if (positionId === 5)
+    return "contact"; // changed from "contacts" to "contact"
   else if (positionId === 6) return "discover";
   else if (positionId === 7) return "profile";
   else return "unknown";
@@ -379,7 +380,8 @@ const AdSubmissionScreen = () => {
                 if (date) {
                   setFormData((prev) => ({
                     ...prev,
-                    [showDatePicker === "start" ? "startDate" : "endDate"]: date,
+                    [showDatePicker === "start" ? "startDate" : "endDate"]:
+                      date,
                   }));
                 }
               }}

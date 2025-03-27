@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Text,
   ActivityIndicator,
-  StyleSheet
+  StyleSheet,
 } from "react-native";
 import { Toast } from "react-native-toast-notifications";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
@@ -39,14 +39,15 @@ export default function PaymentComponent({
   const webViewRef = React.useRef<WebView>(null);
   const successHandled = React.useRef(false);
 
+  // "pay for advertisement on Contact Sync mobile app",
+
   const injectedJS = `(function() {
     const successPatterns = [
       "Payment successful",
       "Thank you for your payment",
-      "Transaction successful",
+      "Transaction Successful",
       "Transaction completed",
       "Download Receipt",
-      "pay for advertisement on Contact Sync mobile app",
       "Peter Otakhor"
     ];
 

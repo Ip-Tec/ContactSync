@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { useContacts } from "@/context/ContactsContext";
@@ -14,6 +15,7 @@ import { maskPhone, maskEmail } from "@/utils/maskUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { matchPhoneNumbers } from "@/utils/phoneUtils";
+import { router } from "expo-router";
 
 interface FileContact {
   id: string;
@@ -23,7 +25,7 @@ interface FileContact {
 }
 
 const CACHE_KEY = "cached_unique_contacts";
-const CACHE_TIMEOUT = 60 * 60 * 1000; // 1 hour cache
+const CACHE_TIMEOUT = 60 * 60 * 500; // 30 min cache
 
 const parseCSV = (content: string): FileContact[] => {
   const lines = content.split("\n").filter(Boolean);
@@ -65,18 +67,23 @@ const ContactUserDoNotHave = () => {
   const { contacts: deviceContacts } = useContacts();
   const [uniqueContacts, setUniqueContacts] = useState<FileContact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // console.log("deviceContacts", deviceContacts);
 
   const isContactOnDevice = (contact: FileContact) => {
     return deviceContacts.some((deviceContact) => {
       const phoneMatch = contact.phoneNumbers?.some((cPhone) =>
-        deviceContact.phoneNumbers?.some(
-          (dPhone) => matchPhoneNumbers(cPhone.number, dPhone.number).match
+        deviceContact.phoneNumbers?.some((dPhone) =>
+          matchPhoneNumbers(cPhone.number || "", dPhone.number || "")
         )
       );
       const emailMatch = contact.emails?.some((cEmail) =>
         deviceContact.emails?.some(
-          (dEmail) => cEmail.email.toLowerCase() === dEmail.email.toLowerCase()
+          (dEmail) =>
+            (cEmail.email || "").toLowerCase() ===
+            (dEmail.email || "").toLowerCase()
         )
       );
       return phoneMatch || emailMatch;
@@ -86,7 +93,6 @@ const ContactUserDoNotHave = () => {
   const fetchAndProcessContacts = async () => {
     try {
       setLoading(true);
-
       // Check cache first
       const cached = await AsyncStorage.getItem(CACHE_KEY);
       if (cached) {
@@ -96,13 +102,12 @@ const ContactUserDoNotHave = () => {
           return;
         }
       }
-
       // Fetch file records from DB
       const { data: files, error } = await supabase
         .from("contact_file_urls")
         .select("*")
         .order("created_at", { ascending: false });
-
+        console.log("files", files);
       if (error) throw error;
       if (!files?.length) throw new Error("No contact files available");
 
@@ -119,7 +124,6 @@ const ContactUserDoNotHave = () => {
           ...contacts.filter((c) => !isContactOnDevice(c)),
         ];
       }
-
       // Deduplicate and cache
       const unique = processedContacts.filter(
         (v, i, a) =>
@@ -129,7 +133,6 @@ const ContactUserDoNotHave = () => {
               t.phoneNumbers?.[0]?.number === v.phoneNumbers?.[0]?.number
           ) === i
       );
-
       await AsyncStorage.setItem(
         CACHE_KEY,
         JSON.stringify({
@@ -137,16 +140,28 @@ const ContactUserDoNotHave = () => {
           timestamp: Date.now(),
         })
       );
-
       setUniqueContacts(unique);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load contacts");
       Alert.alert("Error", "Could not fetch unique contacts");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchAndProcessContacts();
+  }, []);
+
+  // Refetch contacts when deviceContacts updates.
+  useEffect(() => {
+    // Only fetch if deviceContacts is defined (or if you expect it to change from empty to populated)
+    fetchAndProcessContacts();
+  }, [deviceContacts]);
+
+  // Also run fetch on mount
   useEffect(() => {
     fetchAndProcessContacts();
   }, []);
@@ -165,16 +180,17 @@ const ContactUserDoNotHave = () => {
         <FlatList
           data={uniqueContacts}
           keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           renderItem={({ item }) => (
             <View className="bg-gray-100 p-4 rounded-lg mb-2 mx-4">
               <Text className="font-bold text-lg mb-2">{item.name}</Text>
-
               {item.phoneNumbers?.map((phone, idx) => (
                 <Text key={idx} className="text-gray-600">
                   Phone: {maskPhone(phone.number)}
                 </Text>
               ))}
-
               {item.emails?.map((email, idx) => (
                 <Text key={idx} className="text-gray-600">
                   Email: {maskEmail(email.email)}
@@ -192,7 +208,11 @@ const ContactUserDoNotHave = () => {
 
       <TouchableOpacity
         className="bg-blue-500 p-4 rounded-full mx-4 mt-4"
-        onPress={() => navigation.navigate("/(tabs)/home")}
+        onPress={() =>
+          router.push({
+            pathname: "/(tabs)/home",
+          })
+        }
       >
         <Text className="text-white text-center font-bold">Go to Home</Text>
       </TouchableOpacity>

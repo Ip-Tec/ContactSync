@@ -15,7 +15,7 @@ const DiscoverScreen: React.FC<DiscoverScreenProps> = () => {
 
   // Separate ads based on pricing_type.
   const discoverAd = adsList.find((ad) => ad.pricing_type === "discover");
-  const headerHeight = 100;
+  const headerHeight = 120;
 
   return (
     <View className="flex-1 bg-gray-100">
@@ -25,6 +25,7 @@ const DiscoverScreen: React.FC<DiscoverScreenProps> = () => {
             ? discoverAd.media_url
             : require("@/assets/images/explore.jpeg")
         }
+        redirect_url={discoverAd?.redirect_url || undefined}
         headerHeight={headerHeight}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}

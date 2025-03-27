@@ -14,7 +14,7 @@ const ExploreScreen: React.FC<ExploreScreenProps> = () => {
 
   // Separate ads based on pricing_type.
   const exploreAd = adsList.find((ad) => ad.pricing_type === "contact");
-  const headerHeight = 100;
+  const headerHeight = 120;
 
   return (
     <ThemedView style={{ flex: 1 }}>

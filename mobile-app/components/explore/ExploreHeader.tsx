@@ -1,9 +1,10 @@
 import React from "react";
-import { Animated, TextInput, View, StyleSheet, ImageURISource } from "react-native";
+import { Animated, TextInput, View, TouchableOpacity, Linking, StyleSheet, ImageURISource } from "react-native";
 
 interface ExploreHeaderProps {
   headerHeight?: Animated.AnimatedInterpolation<number> | number;
   searchQuery: string;
+  redirect_url?:string | undefined;
   image_url: ImageURISource;
   displayInput?: boolean;
   setSearchQuery: (text: string) => void;
@@ -12,6 +13,7 @@ interface ExploreHeaderProps {
 const ExploreHeader: React.FC<ExploreHeaderProps> = ({
   headerHeight = 150,
   image_url,
+  redirect_url,
   searchQuery,
   setSearchQuery,
   displayInput=true
@@ -27,11 +29,14 @@ const ExploreHeader: React.FC<ExploreHeaderProps> = ({
       }}
     >
       {/* Animated background image fills the header */}
+    <TouchableOpacity className="flex-1 w-full h-full"
+    onPress={() => redirect_url && Linking.openURL(redirect_url)}>
       <Animated.Image
         source={image_url}
         style={[StyleSheet.absoluteFill, { height: headerHeight }]}
         resizeMode="cover"
       />
+      </TouchableOpacity>
       {/* Search bar container positioned at the bottom */}
       <View style={[styles.searchContainer, { display: displayInput ? "flex" : "none" }]}>
         <TextInput

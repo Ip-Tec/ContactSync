@@ -20,6 +20,7 @@ import BottomSheet from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import { toggleContactsPermission } from "@/components/RequestPermissions";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ProfileScreen = () => {
   const toast = useToast();
@@ -30,6 +31,7 @@ const ProfileScreen = () => {
     changeEmail,
     changePhoneNumber,
     deleteAccount,
+    ads,
   } = useAuth();
   const [autoMerge, setAutoMerge] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
@@ -42,18 +44,53 @@ const ProfileScreen = () => {
     useState<boolean>(false);
 
   const [allowContactAccess, setAllowContactAccess] = useState<boolean>(false);
+  const [clearCacheSwitch, setClearCacheSwitch] = useState(false);
+  const [cacheSize, setCacheSize] = useState("Calculating...");
 
-  const { ads } = useAuth();
   const adsList = ads || [];
-
-  // Separate ads based on pricing_type.
   const profileAd = adsList.find((ad) => ad.pricing_type === "discover");
+
+  // Helper function to format bytes into KB, MB or GB
+  const formatCacheSize = (bytes: number) => {
+    const kb = bytes / 1024;
+    if (kb < 1024) {
+      return `${kb.toFixed(2)} KB`;
+    }
+    const mb = kb / 1024;
+    if (mb < 1024) {
+      return `${mb.toFixed(2)} MB`;
+    }
+    const gb = mb / 1024;
+    return `${gb.toFixed(2)} GB`;
+  };
+
+  // Calculate total cache size by summing all stored string lengths
+  const calculateCacheSize = async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const stores = await AsyncStorage.multiGet(keys);
+      let totalBytes = 0;
+      stores.forEach(([_, value]) => {
+        if (value) {
+          // Using string length as an approximation for bytes
+          totalBytes += value.length;
+        }
+      });
+      setCacheSize(formatCacheSize(totalBytes));
+    } catch (error) {
+      setCacheSize("Error");
+    }
+  };
+
+  // Update cache size on mount and after clearing cache
+  useEffect(() => {
+    calculateCacheSize();
+  }, []);
 
   const handlePermissionToggle = async (value: boolean) => {
     const result = await toggleContactsPermission();
     setAllowContactAccess(result);
 
-    // Add visual feedback
     if (result) {
       toast.show("Contacts access enabled", { type: "success" });
     } else {
@@ -74,10 +111,8 @@ const ProfileScreen = () => {
       const { data } = await Contacts.getContactsAsync({
         fields: [Contacts.Fields.PhoneNumbers, Contacts.Fields.Emails],
       });
-      const msg = `Auto Merge:Automatically merged duplicates from ${data.length} contacts.`;
-      toast.show(msg, {
-        type: "info",
-      });
+      const msg = `Auto Merge: Automatically merged duplicates from ${data.length} contacts.`;
+      toast.show(msg, { type: "info" });
     } catch (error) {
       toast.show("Error: Failed to merge duplicates.", { type: "error" });
     }
@@ -116,46 +151,67 @@ const ProfileScreen = () => {
     useState(false);
 
   const openAccountSettings = useCallback(() => {
-    bottomSheetRef.current?.snapToIndex(1); // Opens the sheet at the 50% snap point
+    bottomSheetRef.current?.snapToIndex(1);
   }, []);
 
   const closeAccountSettings = useCallback(() => {
-    bottomSheetRef.current?.snapToIndex(-1); // Hides the sheet
+    bottomSheetRef.current?.snapToIndex(-1);
   }, []);
 
-  // Handlers for account settings actions
   const handleChangeEmail = () => {
     console.log("Change Email triggered");
-    // Call your context changeEmail method here...
     closeAccountSettings();
   };
 
   const handleChangePhoneNumber = () => {
     console.log("Change Phone Number triggered");
-    // Call your context changePhoneNumber method here...
     closeAccountSettings();
   };
 
   const handleChangePassword = () => {
     console.log("Change Password triggered");
-    // For instance, you might show the reset password modal
     closeAccountSettings();
-    // setIsResetPasswordModalVisible(true); // if you want to show the modal
   };
 
   const handleDeleteAccount = () => {
     console.log("Delete Account triggered");
-    // Call your context deleteAccount method here...
     closeAccountSettings();
+  };
+
+  // Clear cache handler
+  const handleClearCacheSwitch = async (value: boolean) => {
+    setClearCacheSwitch(value);
+    if (value) {
+      try {
+        await AsyncStorage.clear();
+        toast.show("Cache cleared successfully", { type: "success" });
+        // After clearing, update the cache size
+        calculateCacheSize();
+      } catch (error) {
+        toast.show("Error clearing cache", { type: "error" });
+      }
+      // Reset the switch after action
+      setClearCacheSwitch(false);
+    }
   };
 
   return (
     <ParallaxScrollView
       headerImage={
-        <Image
-          source={profileAd ? profileAd.media_url : require("@/assets/images/icon.png")}
-          className="h-full w-full"
-        />
+        <TouchableOpacity
+          onPress={() =>
+            profileAd && Linking.openURL(profileAd.redirect_url || "")
+          }
+        >
+          <Image
+            source={
+              profileAd
+                ? { uri: profileAd.media_url }
+                : require("@/assets/images/icon.png")
+            }
+            className="h-full w-full"
+          />
+        </TouchableOpacity>
       }
       headerBackgroundColor={{ light: "#D0D0D0", dark: "#353636" }}
     >
@@ -210,14 +266,8 @@ const ProfileScreen = () => {
             <Text className="text-lg text-blue-600">In-App Help & Support</Text>
           </View>
           <Text className="text-sm mt-1 p-2 mx-2 text-gray-500">
-            Need assistance with your account or have questions about our app?
-            We're here to help! Our dedicated support team is available to
-            provide you with personalized support via WhatsApp.
-          </Text>
-          <Text className="text-sm mt-1 p-2 mx-2 text-gray-500">
-            Tap the button above to start a chat with our support team. We'll
-            respond promptly to assist you with any issues or questions you may
-            have.
+            Need assistance? Tap the button above to start a chat with our
+            support team.
           </Text>
         </TouchableOpacity>
 
@@ -347,20 +397,23 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Advertised with us */}
+        {/* Cache Management */}
         <View className="mb-8 bg-gray-200 rounded-lg">
           <View className="flex-row items-center justify-between border-b border-gray-300 px-4 py-3">
-            <ThemedText className="text-lg text-gray-800">Advertised with us</ThemedText>
+            <Text className="text-lg text-gray-800">Cache Management</Text>
+            <Switch
+              value={clearCacheSwitch}
+              onValueChange={handleClearCacheSwitch}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={clearCacheSwitch ? "#000033" : "#f4f3f4"}
+            />
           </View>
-          <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
-           you can add your business to our app.
+          <Text className="text-sm mt-1 p-2 mx-2 text-gray-500">
+            Toggle the switch to clear cached data.
           </Text>
-          <TouchableOpacity
-            onPress={() => router.push("/AdSubmissionScreen")}
-            className="px-4 py-3 bg-blue-500"
-          >
-            <Text className="text-gray-200 text-center w-full">Add Business</Text>
-          </TouchableOpacity>
+          <Text className="text-xs mt-1 p-2 mx-2 text-gray-500">
+            Current cache size: {cacheSize}
+          </Text>
         </View>
 
         {/* About Section */}
@@ -368,12 +421,16 @@ const ProfileScreen = () => {
           <View className="flex-row items-center justify-between border-b border-gray-300 px-4 py-3">
             <ThemedText className="text-lg text-gray-800">About</ThemedText>
           </View>
-          <Text className="text-sm mt-1 p-2 mx-2 text-bold text-gray-500">
+          <Text className="text-sm mt-1 p-2 mx-2 text-gray-500">
             Learn more about our app and its features.
           </Text>
           <View className="px-4 py-3 border-y border-gray-300">
             <Text className="text-gray-800">
-              App Version: {Constants.nativeAppVersion}
+              App Version:{" "}
+              {Constants.nativeAppVersion &&
+              Constants.nativeAppVersion.trim().length > 0
+                ? Constants.nativeAppVersion
+                : "Not Available"}
             </Text>
           </View>
           <TouchableOpacity
@@ -387,6 +444,28 @@ const ProfileScreen = () => {
             className="px-4 py-3"
           >
             <Text className="text-gray-800">Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Advertised with us */}
+        <View className="mb-8 bg-gray-200 rounded-lg">
+          <View className="flex-row items-center justify-between border-b border-gray-300 px-4 py-3">
+            <ThemedText className="text-lg text-gray-800">
+              Advertised with us
+            </ThemedText>
+          </View>
+          <Text className="text-base mt-1 p-2 mx-2 font-medium text-gray-500">
+            Get your business in front of thousands of potential customers.
+            Showcase your products or services with a custom ad that highlights
+            what makes your business unique.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push("/AdSubmissionScreen")}
+            className="px-4 py-3 bg-blue-500"
+          >
+            <Text className="text-gray-200 text-center w-full">
+              Add Business
+            </Text>
           </TouchableOpacity>
         </View>
 

@@ -34,7 +34,8 @@ export default function PaymentWebView({
       "Transaction successful",
       "Transaction completed",
       "Download Receipt",
-      "Peter Otakhor"
+      "Peter Otakhor",
+      "Payed by"
     ];
 
      let checkTimeout;
